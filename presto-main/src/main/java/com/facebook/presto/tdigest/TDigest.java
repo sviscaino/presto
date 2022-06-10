@@ -566,6 +566,54 @@ public class TDigest
         return weightedAverage(mean[n - 1], z1, max, z2);
     }
 
+    public double trimmedMean(double l, double h)
+    {
+        checkArgument(l >= 0 && l <= 1, "l should be in [0,1], got %s", l);
+        checkArgument(h >= 0 && h <= 1, "h should be in [0,1], got %s", h);
+
+        if (unmergedWeight > 0) {
+            compress();
+        }
+
+        if (activeCentroids == 0 || l >= h) {
+            return Double.NaN;
+        }
+
+        if (l == 0 && h == 1) {
+            return sum / totalWeight;
+        }
+
+        double lowIndex = l * totalWeight;
+        double highIndex = h * totalWeight;
+
+        int n = activeCentroids;
+
+        double weightSoFar = 0;
+        double sumInBounds = 0;
+        double weightInBounds = 0;
+        for (int i = 0; i < n - 1; i++) {
+            if (weightSoFar < lowIndex && lowIndex <= weightSoFar + weight[i] && highIndex <= weightSoFar + weight[i]) {
+                // lower and upper bounds are so close together that they are in the same weight interval
+                return mean[i];
+            } else if (weightSoFar < lowIndex && lowIndex <= weightSoFar + weight[i]) {
+                double addedWeight = weightSoFar + weight[i] - lowIndex;
+                sumInBounds += mean[i] * addedWeight;
+                weightInBounds += addedWeight;
+            } else if (highIndex < weightSoFar + weight[i] && highIndex > weightSoFar) {
+                double addedWeight = highIndex - weightSoFar;
+                sumInBounds += mean[i] * addedWeight;
+                weightInBounds += addedWeight;
+                return sumInBounds / weightInBounds;
+            } else if (lowIndex <= weightSoFar && weightSoFar <= highIndex) {
+                sumInBounds += mean[i] * weight[i];
+                weightInBounds += weight[i];
+            }
+            weightSoFar += weight[i];
+        }
+
+        return sumInBounds / weightInBounds;
+    }
+
     public int centroidCount()
     {
         mergeNewValues();

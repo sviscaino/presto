@@ -41,6 +41,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.facebook.presto.tdigest.TDigest.createTDigest;
 import static java.lang.String.format;
@@ -139,6 +140,11 @@ public class TestTDigest
         for (int i = 0; i < quantile.length; i++) {
             assertContinuousWithinBound(quantile[i], STANDARD_ERROR, list, tDigest);
         }
+        for (int i = 0; i < quantile.length; i++) {
+            for (int j = i + 1; j < quantile.length; j++) {
+                assertTrimmedMean(quantile[i], quantile[j], STANDARD_ERROR, list, tDigest);
+            }
+        }
     }
 
     @Test
@@ -160,6 +166,11 @@ public class TestTDigest
 
         for (int i = 0; i < quantile.length; i++) {
             assertContinuousWithinBound(quantile[i], STANDARD_ERROR, list, tDigest);
+        }
+        for (int i = 0; i < quantile.length; i++) {
+            for (int j = i + 1; j < quantile.length; j++) {
+                assertTrimmedMean(quantile[i], quantile[j], STANDARD_ERROR, list, tDigest);
+            }
         }
     }
 
@@ -200,6 +211,11 @@ public class TestTDigest
         for (int i = 0; i < quantile.length; i++) {
             assertContinuousWithinBound(quantile[i], STANDARD_ERROR, list, tDigest);
         }
+        for (int i = 0; i < quantile.length; i++) {
+            for (int j = i + 1; j < quantile.length; j++) {
+                assertTrimmedMean(quantile[i], quantile[j], STANDARD_ERROR, list, tDigest);
+            }
+        }
     }
 
     @Test
@@ -225,6 +241,11 @@ public class TestTDigest
 
         for (int i = 0; i < quantile.length; i++) {
             assertContinuousWithinBound(quantile[i], STANDARD_ERROR, list, tDigest1);
+        }
+        for (int i = 0; i < quantile.length; i++) {
+            for (int j = i + 1; j < quantile.length; j++) {
+                assertTrimmedMean(quantile[i], quantile[j], STANDARD_ERROR, list, tDigest1);
+            }
         }
     }
 
@@ -416,5 +437,21 @@ public class TestTDigest
     {
         double expectedSum = values.stream().reduce(0.0d, Double::sum);
         assertEquals(tDigest.getSum(), expectedSum, 0.0001);
+    }
+
+    private void assertTrimmedMean(double lowQuantile, double highQuantile, double bound, List<Double> values, TDigest tDigest)
+    {
+        double lowerQuantile = values.get((int) (NUMBER_OF_ENTRIES * lowQuantile));
+        double upperQuantile = values.get((int) (NUMBER_OF_ENTRIES * highQuantile));
+
+        double expectedMean = values.stream()
+                .filter(v -> lowerQuantile <= v && v <= upperQuantile)
+                .mapToDouble(v -> v)
+                .average()
+                .orElse(Double.NaN);
+        double returnValue = tDigest.trimmedMean(lowQuantile, highQuantile);
+        double percentError = (returnValue - expectedMean) / (values.get(NUMBER_OF_ENTRIES - 1) - values.get(0));
+        assertTrue(percentError <= bound,
+                format("Returned trimmed mean %s is has more than %s%% difference with the expected trimmed mean %s", returnValue, bound*100, expectedMean));
     }
 }
