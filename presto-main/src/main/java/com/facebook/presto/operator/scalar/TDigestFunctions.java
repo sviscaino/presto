@@ -136,4 +136,15 @@ public final class TDigestFunctions
         blockBuilder.closeEntry();
         return TDIGEST_CENTROIDS_ROW_TYPE.getObject(blockBuilder, blockBuilder.getPositionCount() - 1);
     }
+
+    @ScalarFunction(value = "trimmed_mean", visibility = EXPERIMENTAL)
+    @Description("Returns an estimate of the mean, after trimming to keep only the given percentile bounds")
+    @SqlType("double")
+    public static double trimmedMeanTDigestDouble(@SqlType("tdigest(double)") Slice input, @SqlType(StandardTypes.DOUBLE) double lowerPercentileBound, @SqlType(StandardTypes.DOUBLE) double upperPercentileBound)
+    {
+        checkCondition(lowerPercentileBound >= 0 && lowerPercentileBound <= 1, INVALID_FUNCTION_ARGUMENT, "Lower percentile bound should be in [0,1].");
+        checkCondition(upperPercentileBound >= 0 && upperPercentileBound <= 1, INVALID_FUNCTION_ARGUMENT, "Upper percentile bound should be in [0,1].");
+        TDigest digest = createTDigest(input);
+        return digest.trimmedMean(lowerPercentileBound, upperPercentileBound);
+    }
 }
