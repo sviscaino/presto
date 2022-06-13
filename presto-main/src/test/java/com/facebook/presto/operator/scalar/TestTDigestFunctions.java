@@ -146,17 +146,15 @@ public class TestTDigestFunctions
         }
 
         functionAssertions.assertFunction(
-                format("quantile_at_value(CAST(X'%s' AS tdigest(%s)), %s) = 1",
-                        new SqlVarbinary(tDigest.serialize().getBytes()).toString().replaceAll("\\s+", " "),
-                        DOUBLE,
+                format("quantile_at_value(%s, %s) = 1",
+                        toSqlString(tDigest),
                         1_000_000_000d),
                 BOOLEAN,
                 true);
 
         functionAssertions.assertFunction(
-                format("quantile_at_value(CAST(X'%s' AS tdigest(%s)), %s) = 0",
-                        new SqlVarbinary(tDigest.serialize().getBytes()).toString().replaceAll("\\s+", " "),
-                        DOUBLE,
+                format("quantile_at_value(%s, %s) = 0",
+                        toSqlString(tDigest),
                         -500d),
                 BOOLEAN,
                 true);
@@ -428,9 +426,7 @@ public class TestTDigestFunctions
         double sum = values.stream().reduce(0.0d, Double::sum);
         long count = values.size();
 
-        String sql = format("destructure_tdigest(CAST(X'%s' AS tdigest(%s)))",
-                new SqlVarbinary(tDigest.serialize().getBytes()).toString().replaceAll("\\s+", " "),
-                DOUBLE);
+        String sql = format("destructure_tdigest(%s)", toSqlString(tDigest));
 
         functionAssertions.assertFunction(
                 sql,
@@ -469,9 +465,7 @@ public class TestTDigestFunctions
         double sum = values.stream().reduce(0.0d, Double::sum);
         long count = values.size();
 
-        String sql = format("destructure_tdigest(CAST(X'%s' AS tdigest(%s)))",
-                new SqlVarbinary(tDigest.serialize().getBytes()).toString().replaceAll("\\s+", " "),
-                DOUBLE);
+        String sql = format("destructure_tdigest(%s)", toSqlString(tDigest));
 
         functionAssertions.assertFunction(format("%s.compression", sql), DOUBLE, compression);
         functionAssertions.assertFunction(format("%s.min", sql), DOUBLE, min);
@@ -558,8 +552,8 @@ public class TestTDigestFunctions
 
         functionAssertions.selectSingleValue(
                 format(
-                        "scale_tdigest(CAST(X'%s' AS tdigest(double)), -1)",
-                        new SqlVarbinary(tDigest.serialize().getBytes()).toString().replaceAll("\\s+", " ")),
+                        "scale_tdigest(%s, -1)",
+                        toSqlString(tDigest)),
                 TDIGEST_DOUBLE,
                 SqlVarbinary.class);
     }
@@ -575,9 +569,7 @@ public class TestTDigestFunctions
 
         // Scale up.
         SqlVarbinary sqlVarbinary = functionAssertions.selectSingleValue(
-                format(
-                        "scale_tdigest(CAST(X'%s' AS tdigest(double)), 2)",
-                        new SqlVarbinary(tDigest.serialize().getBytes()).toString().replaceAll("\\s+", " ")),
+                format("scale_tdigest(%s, 2)", toSqlString(tDigest)),
                 TDIGEST_DOUBLE,
                 SqlVarbinary.class);
 
@@ -589,9 +581,7 @@ public class TestTDigestFunctions
 
         // Scale down.
         sqlVarbinary = functionAssertions.selectSingleValue(
-                format(
-                        "scale_tdigest(CAST(X'%s' AS tdigest(double)), 0.5)",
-                        new SqlVarbinary(tDigest.serialize().getBytes()).toString().replaceAll("\\s+", " ")),
+                format("scale_tdigest(%s, 0.5)", toSqlString(tDigest)),
                 TDIGEST_DOUBLE,
                 SqlVarbinary.class);
 
@@ -613,17 +603,15 @@ public class TestTDigestFunctions
     private void assertValueWithinBound(double quantile, double error, List<Double> list, TDigest tDigest)
     {
         functionAssertions.assertFunction(
-                format("quantile_at_value(CAST(X'%s' AS tdigest(%s)), %s) <= %s",
-                        new SqlVarbinary(tDigest.serialize().getBytes()).toString().replaceAll("\\s+", " "),
-                        DOUBLE,
+                format("quantile_at_value(%s, %s) <= %s",
+                        toSqlString(tDigest),
                         list.get((int) (NUMBER_OF_ENTRIES * quantile)),
                         getUpperBoundQuantile(quantile, error)),
                 BOOLEAN,
                 true);
         functionAssertions.assertFunction(
-                format("quantile_at_value(CAST(X'%s' AS tdigest(%s)), %s) >= %s",
-                        new SqlVarbinary(tDigest.serialize().getBytes()).toString().replaceAll("\\s+", " "),
-                        DOUBLE,
+                format("quantile_at_value(%s, %s) >= %s",
+                        toSqlString(tDigest),
                         list.get((int) (NUMBER_OF_ENTRIES * quantile)),
                         getLowerBoundQuantile(quantile, error)),
                 BOOLEAN,
@@ -633,17 +621,15 @@ public class TestTDigestFunctions
     private void assertDiscreteQuantileWithinBound(double quantile, double error, List<Integer> list, TDigest tDigest)
     {
         functionAssertions.assertFunction(
-                format("round(value_at_quantile(CAST(X'%s' AS tdigest(%s)), %s)) <= %s",
-                        new SqlVarbinary(tDigest.serialize().getBytes()).toString().replaceAll("\\s+", " "),
-                        DOUBLE,
+                format("round(value_at_quantile(%s, %s)) <= %s",
+                        toSqlString(tDigest),
                         quantile,
                         getUpperBoundValue(quantile, error, list)),
                 BOOLEAN,
                 true);
         functionAssertions.assertFunction(
-                format("round(value_at_quantile(CAST(X'%s' AS tdigest(%s)), %s)) >= %s",
-                        new SqlVarbinary(tDigest.serialize().getBytes()).toString().replaceAll("\\s+", " "),
-                        DOUBLE,
+                format("round(value_at_quantile(%s, %s)) >= %s",
+                        toSqlString(tDigest),
                         quantile,
                         getLowerBoundValue(quantile, error, list)),
                 BOOLEAN,
@@ -653,17 +639,15 @@ public class TestTDigestFunctions
     private void assertContinuousQuantileWithinBound(double quantile, double error, List<Double> list, TDigest tDigest)
     {
         functionAssertions.assertFunction(
-                format("value_at_quantile(CAST(X'%s' AS tdigest(%s)), %s) <= %s",
-                        new SqlVarbinary(tDigest.serialize().getBytes()).toString().replaceAll("\\s+", " "),
-                        DOUBLE,
+                format("value_at_quantile(%s, %s) <= %s",
+                        toSqlString(tDigest),
                         quantile,
                         getUpperBoundValue(quantile, error, list)),
                 BOOLEAN,
                 true);
         functionAssertions.assertFunction(
-                format("value_at_quantile(CAST(X'%s' AS tdigest(%s)), %s) >= %s",
-                        new SqlVarbinary(tDigest.serialize().getBytes()).toString().replaceAll("\\s+", " "),
-                        DOUBLE,
+                format("value_at_quantile(%s, %s) >= %s",
+                        toSqlString(tDigest),
                         quantile,
                         getLowerBoundValue(quantile, error, list)),
                 BOOLEAN,
@@ -708,9 +692,8 @@ public class TestTDigestFunctions
         // Ensure that the lower bound of each item in the distribution is not greater than the chosen quantiles
         functionAssertions.assertFunction(
                 format(
-                        "zip_with(values_at_quantiles(CAST(X'%s' AS tdigest(%s)), ARRAY[%s]), ARRAY[%s], (value, lowerbound) -> value >= lowerbound)",
-                        new SqlVarbinary(tDigest.serialize().getBytes()).toString().replaceAll("\\s+", " "),
-                        "double",
+                        "zip_with(values_at_quantiles(%s, ARRAY[%s]), ARRAY[%s], (value, lowerbound) -> value >= lowerbound)",
+                        toSqlString(tDigest),
                         ARRAY_JOINER.join(boxedPercentiles),
                         ARRAY_JOINER.join(lowerBounds)),
                 METADATA.getType(parseTypeSignature("array(boolean)")),
@@ -719,9 +702,8 @@ public class TestTDigestFunctions
         // Ensure that the upper bound of each item in the distribution is not less than the chosen quantiles
         functionAssertions.assertFunction(
                 format(
-                        "zip_with(values_at_quantiles(CAST(X'%s' AS tdigest(%s)), ARRAY[%s]), ARRAY[%s], (value, upperbound) -> value <= upperbound)",
-                        new SqlVarbinary(tDigest.serialize().getBytes()).toString().replaceAll("\\s+", " "),
-                        "double",
+                        "zip_with(values_at_quantiles(%s, ARRAY[%s]), ARRAY[%s], (value, upperbound) -> value <= upperbound)",
+                        toSqlString(tDigest),
                         ARRAY_JOINER.join(boxedPercentiles),
                         ARRAY_JOINER.join(upperBounds)),
                 METADATA.getType(parseTypeSignature("array(boolean)")),
@@ -738,9 +720,8 @@ public class TestTDigestFunctions
         // Ensure that the lower bound of each item in the distribution is not greater than the chosen quantiles
         functionAssertions.assertFunction(
                 format(
-                        "zip_with(quantiles_at_values(CAST(X'%s' AS tdigest(%s)), ARRAY[%s]), ARRAY[%s], (value, lowerbound) -> value >= lowerbound)",
-                        new SqlVarbinary(tDigest.serialize().getBytes()).toString().replaceAll("\\s+", " "),
-                        "double",
+                        "zip_with(quantiles_at_values(%s, ARRAY[%s]), ARRAY[%s], (value, lowerbound) -> value >= lowerbound)",
+                        toSqlString(tDigest),
                         ARRAY_JOINER.join(boxedValues),
                         ARRAY_JOINER.join(lowerBounds)),
                 METADATA.getType(parseTypeSignature("array(boolean)")),
@@ -756,5 +737,13 @@ public class TestTDigestFunctions
                         ARRAY_JOINER.join(upperBounds)),
                 METADATA.getType(parseTypeSignature("array(boolean)")),
                 Collections.nCopies(values.length, true));
+    }
+
+
+    private String toSqlString(TDigest tDigest)
+    {
+        return format("CAST(X'%s' AS tdigest(%s))",
+                new SqlVarbinary(tDigest.serialize().getBytes()).toString().replaceAll("\\s+", " "),
+                DOUBLE);
     }
 }

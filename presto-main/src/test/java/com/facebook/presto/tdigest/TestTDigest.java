@@ -180,7 +180,7 @@ public class TestTDigest
         for (int i = 0; i < quantile.length; i++) {
             for (int j = i + 1; j < quantile.length; j++) {
                 assertTrimmedMean(quantile[i], quantile[j], STANDARD_ERROR * 2, list, tDigest);
-                // increase error bound to 2% (mean is less accurate than quartile values)
+                // increase error bound to 2% (mean is less accurate than quantile values)
                 // in practice, the difference is always < 2% for uniform distributions
             }
         }
