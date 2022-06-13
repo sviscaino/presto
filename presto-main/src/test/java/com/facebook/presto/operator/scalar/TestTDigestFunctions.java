@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import static com.facebook.presto.common.type.BigintType.BIGINT;
 import static com.facebook.presto.common.type.BooleanType.BOOLEAN;
@@ -315,6 +316,33 @@ public class TestTDigestFunctions
         for (int i = 0; i < quantiles.length; i++) {
             assertContinuousQuantileWithinBound(quantiles[i], STANDARD_ERROR, list, tDigest);
         }
+    }
+
+    @Test
+    public void testTrimmedMean()
+    {
+        TDigest tDigest = createTDigest(STANDARD_COMPRESSION_FACTOR * 2);
+        List<Double> list = new ArrayList<>();
+
+        for (int i = 0; i < NUMBER_OF_ENTRIES; i++) {
+            double value = Math.random() * NUMBER_OF_ENTRIES;
+            tDigest.add(value);
+            list.add(value);
+        }
+
+        sort(list);
+
+        List<Double> lowQuantiles = new ArrayList<>();
+        List<Double> highQuantiles = new ArrayList<>();
+        for (int i = 0; i < quantiles.length; i++) {
+            for (int j = i + 1; j < quantiles.length; j++) {
+                lowQuantiles.add(quantiles[i]);
+                highQuantiles.add(quantiles[j]);
+            }
+        }
+        assertTrimmedMeanValues(lowQuantiles, highQuantiles, STANDARD_ERROR * 2, list, tDigest);
+        // increase error bound to 2% (mean is less accurate than quantile values)
+        // in practice, the difference is always < 2% for uniform distributions with compression=200
     }
 
     @Test
@@ -683,6 +711,15 @@ public class TestTDigestFunctions
         return Math.min(1, quantile + error);
     }
 
+    private double getTrimmedMean(double l, double h, List<? extends Number> values)
+    {
+        return values
+                .subList((int) (NUMBER_OF_ENTRIES * l), (int) (NUMBER_OF_ENTRIES * h))
+                .stream()
+                .mapToDouble(Number::doubleValue)
+                .reduce(0.0d, Double::sum) / ((int) (NUMBER_OF_ENTRIES * h) - (int) (NUMBER_OF_ENTRIES * l) + 1);
+    }
+
     private void assertBlockQuantiles(double[] percentiles, double error, List<? extends Number> rows, TDigest tDigest)
     {
         List<Double> boxedPercentiles = Arrays.stream(percentiles).sorted().boxed().collect(toImmutableList());
@@ -708,6 +745,24 @@ public class TestTDigestFunctions
                         ARRAY_JOINER.join(upperBounds)),
                 METADATA.getType(parseTypeSignature("array(boolean)")),
                 Collections.nCopies(percentiles.length, true));
+    }
+
+    private void assertTrimmedMeanValues(List<Double> lowQuantiles, List<Double> highQuantiles, double error, List<? extends Number> rows, TDigest tDigest)
+    {
+        List<Double> expectedTrimmedMeans = IntStream.range(0, lowQuantiles.size())
+                .mapToDouble(i -> getTrimmedMean(lowQuantiles.get(i), highQuantiles.get(i), rows))
+                .boxed()
+                .collect(toImmutableList());
+        functionAssertions.assertFunction(
+                format(
+                        "zip_with(ARRAY[%s], zip_with(ARRAY[%s], ARRAY[%s], (l, h) -> (l, h)), (v, bounds) -> abs(1-trimmed_mean(%s, bounds[1], bounds[2])/v) <= %s)",
+                        ARRAY_JOINER.join(expectedTrimmedMeans),
+                        ARRAY_JOINER.join(lowQuantiles),
+                        ARRAY_JOINER.join(highQuantiles),
+                        toSqlString(tDigest),
+                        error),
+                METADATA.getType(parseTypeSignature("array(boolean)")),
+                Collections.nCopies(lowQuantiles.size(), true));
     }
 
     private void assertBlockValues(double[] values, double error, TDigest tDigest)
@@ -738,7 +793,6 @@ public class TestTDigestFunctions
                 METADATA.getType(parseTypeSignature("array(boolean)")),
                 Collections.nCopies(values.length, true));
     }
-
 
     private String toSqlString(TDigest tDigest)
     {
