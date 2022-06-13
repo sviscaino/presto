@@ -591,7 +591,7 @@ public class TDigest
         double weightSoFar = 0;
         double sumInBounds = 0;
         double weightInBounds = 0;
-        for (int i = 0; i < n - 1; i++) {
+        for (int i = 0; i < n; i++) {
             if (weightSoFar < lowIndex && lowIndex <= weightSoFar + weight[i] && highIndex <= weightSoFar + weight[i]) {
                 // lower and upper bounds are so close together that they are in the same weight interval
                 return mean[i];
