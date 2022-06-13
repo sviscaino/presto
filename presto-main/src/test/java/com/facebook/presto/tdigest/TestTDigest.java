@@ -35,6 +35,8 @@ import org.apache.commons.math3.distribution.BinomialDistribution;
 import org.apache.commons.math3.distribution.GeometricDistribution;
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.distribution.PoissonDistribution;
+import org.apache.commons.math3.distribution.RealDistribution;
+import org.apache.commons.math3.distribution.UniformRealDistribution;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
@@ -55,6 +57,8 @@ public class TestTDigest
     private static final double STANDARD_ERROR = 0.01;
     private static final double[] quantile = {0.0001, 0.0200, 0.0300, 0.04000, 0.0500, 0.1000, 0.2000, 0.3000, 0.4000, 0.5000, 0.6000, 0.7000, 0.8000,
             0.9000, 0.9500, 0.9600, 0.9700, 0.9800, 0.9999};
+    private static final int TRIMMED_MEAN_COMPRESSION_FACTOR = 200;
+    private static final double TRIMMED_MEAN_ERROR_IN_DEVIATIONS = 0.03;
 
     @Test
     public void testAddElementsInOrder()
@@ -164,26 +168,21 @@ public class TestTDigest
     }
 
     @Test
-    public void testTrimmedMean()
+    public void testTrimmedMeanUniformDistribution()
     {
-        TDigest tDigest = createTDigest(STANDARD_COMPRESSION_FACTOR * 2);
-        List<Double> list = new ArrayList<>();
+        testTrimmedMeanForDistribution(new UniformRealDistribution(0.0d, NUMBER_OF_ENTRIES));
+    }
 
-        for (int i = 0; i < NUMBER_OF_ENTRIES; i++) {
-            double value = Math.random() * NUMBER_OF_ENTRIES;
-            tDigest.add(value);
-            list.add(value);
-        }
+    @Test(enabled = false)
+    public void testTrimmedMeanNormalDistributionLowVariance()
+    {
+        testTrimmedMeanForDistribution(new NormalDistribution(1000, 1));
+    }
 
-        sort(list);
-
-        for (int i = 0; i < quantile.length; i++) {
-            for (int j = i + 1; j < quantile.length; j++) {
-                assertTrimmedMean(quantile[i], quantile[j], STANDARD_ERROR * 2, list, tDigest);
-                // increase error bound to 2% (mean is less accurate than quantile values)
-                // in practice, the difference is always < 2% for uniform distributions with compression=200
-            }
-        }
+    @Test(enabled = false)
+    public void testTrimmedMeanNormalDistributionHighVariance()
+    {
+        testTrimmedMeanForDistribution(new NormalDistribution(0, 1));
     }
 
     @Test
@@ -441,15 +440,35 @@ public class TestTDigest
         assertEquals(tDigest.getSum(), expectedSum, 0.0001);
     }
 
-    private void assertTrimmedMean(double l, double h, double bound, List<Double> values, TDigest tDigest)
+    private void testTrimmedMeanForDistribution(RealDistribution distribution)
+    {
+        TDigest tDigest = createTDigest(TRIMMED_MEAN_COMPRESSION_FACTOR);
+        List<Double> list = new ArrayList<>();
+
+        for (int i = 0; i < NUMBER_OF_ENTRIES; i++) {
+            double value = distribution.sample();
+            tDigest.add(value);
+            list.add(value);
+        }
+
+        sort(list);
+
+        for (int i = 0; i < quantile.length; i++) {
+            for (int j = i + 1; j < quantile.length; j++) {
+                assertTrimmedMean(quantile[i], quantile[j], Math.sqrt(distribution.getNumericalVariance()), TRIMMED_MEAN_ERROR_IN_DEVIATIONS, list, tDigest);
+            }
+        }
+    }
+
+    private void assertTrimmedMean(double l, double h, double sd, double sigmaBound, List<Double> values, TDigest tDigest)
     {
         double expectedMean = values
-                .subList((int) (NUMBER_OF_ENTRIES * l), (int) (NUMBER_OF_ENTRIES * h))
+                .subList((int) (NUMBER_OF_ENTRIES * l), (int) (NUMBER_OF_ENTRIES * h) + 1)
                 .stream()
                 .reduce(0.0d, Double::sum) / ((int) (NUMBER_OF_ENTRIES * h) - (int) (NUMBER_OF_ENTRIES * l) + 1);
         double returnValue = tDigest.trimmedMean(l, h);
-        double percentError = Math.abs(returnValue - expectedMean) / expectedMean;
-        assertTrue(percentError <= bound,
-                format("Returned trimmed mean %s has %s%% > %s%% difference with the expected trimmed mean %s", returnValue, percentError * 100, bound * 100, expectedMean));
+        double standardizedError = Math.abs((returnValue - expectedMean) / sd);
+        assertTrue(standardizedError <= sigmaBound,
+                format("Returned trimmed mean %s is %s sigma > %s from the actual trimmed mean %s", returnValue, standardizedError, sigmaBound, expectedMean));
     }
 }
