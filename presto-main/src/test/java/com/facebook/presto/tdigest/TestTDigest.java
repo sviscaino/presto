@@ -58,7 +58,7 @@ public class TestTDigest
     private static final double[] quantile = {0.0001, 0.0200, 0.0300, 0.04000, 0.0500, 0.1000, 0.2000, 0.3000, 0.4000, 0.5000, 0.6000, 0.7000, 0.8000,
             0.9000, 0.9500, 0.9600, 0.9700, 0.9800, 0.9999};
     private static final int TRIMMED_MEAN_COMPRESSION_FACTOR = 200;
-    private static final double TRIMMED_MEAN_ERROR_IN_DEVIATIONS = 0.03;
+    private static final double TRIMMED_MEAN_ERROR_IN_DEVIATIONS = 0.05;
 
     @Test
     public void testAddElementsInOrder()
@@ -170,19 +170,42 @@ public class TestTDigest
     @Test
     public void testTrimmedMeanUniformDistribution()
     {
-        testTrimmedMeanForDistribution(new UniformRealDistribution(0.0d, NUMBER_OF_ENTRIES));
+        testTrimmedMeanForRealDistribution(new UniformRealDistribution(0.0d, NUMBER_OF_ENTRIES));
     }
 
     @Test(enabled = false)
     public void testTrimmedMeanNormalDistributionLowVariance()
     {
-        testTrimmedMeanForDistribution(new NormalDistribution(1000, 1));
+        testTrimmedMeanForRealDistribution(new NormalDistribution(1000, 1));
     }
 
     @Test(enabled = false)
     public void testTrimmedMeanNormalDistributionHighVariance()
     {
-        testTrimmedMeanForDistribution(new NormalDistribution(0, 1));
+        testTrimmedMeanForRealDistribution(new NormalDistribution(0, 1));
+    }
+
+    @Test(enabled = false)
+    public void testTrimmedMeanPoissonDistribution()
+    {
+        PoissonDistribution distribution = new PoissonDistribution(1);
+        TDigest tDigest = createTDigest(TRIMMED_MEAN_COMPRESSION_FACTOR);
+        List<Double> list = new ArrayList<>();
+
+        for (int i = 0; i < NUMBER_OF_ENTRIES; i++) {
+            double value = distribution.sample();
+            tDigest.add(value);
+            list.add(value);
+        }
+
+        sort(list);
+
+        // test all quantile combinations
+        for (int i = 0; i < quantile.length; i++) {
+            for (int j = i + 1; j < quantile.length; j++) {
+                assertTrimmedMean(quantile[i], quantile[j], Math.sqrt(distribution.getNumericalVariance()), TRIMMED_MEAN_ERROR_IN_DEVIATIONS, list, tDigest);
+            }
+        }
     }
 
     @Test
@@ -440,7 +463,7 @@ public class TestTDigest
         assertEquals(tDigest.getSum(), expectedSum, 0.0001);
     }
 
-    private void testTrimmedMeanForDistribution(RealDistribution distribution)
+    private void testTrimmedMeanForRealDistribution(RealDistribution distribution)
     {
         TDigest tDigest = createTDigest(TRIMMED_MEAN_COMPRESSION_FACTOR);
         List<Double> list = new ArrayList<>();
