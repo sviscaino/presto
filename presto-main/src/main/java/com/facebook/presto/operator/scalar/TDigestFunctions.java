@@ -138,7 +138,7 @@ public final class TDigestFunctions
     }
 
     @ScalarFunction(value = "trimmed_mean", visibility = EXPERIMENTAL)
-    @Description("Returns an estimate of the mean, excluding portions of the distribution outside the provided percentile bounds")
+    @Description("Returns an estimate of the mean, excluding portions of the distribution outside the provided quantile bounds.")
     @SqlType("double")
     public static double trimmedMeanTDigestDouble(@SqlType("tdigest(double)") Slice input, @SqlType(StandardTypes.DOUBLE) double lowerPercentileBound, @SqlType(StandardTypes.DOUBLE) double upperPercentileBound)
     {
