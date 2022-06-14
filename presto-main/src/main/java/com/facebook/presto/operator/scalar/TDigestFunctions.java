@@ -140,11 +140,11 @@ public final class TDigestFunctions
     @ScalarFunction(value = "trimmed_mean", visibility = EXPERIMENTAL)
     @Description("Returns an estimate of the mean, excluding portions of the distribution outside the provided quantile bounds.")
     @SqlType("double")
-    public static double trimmedMeanTDigestDouble(@SqlType("tdigest(double)") Slice input, @SqlType(StandardTypes.DOUBLE) double lowerPercentileBound, @SqlType(StandardTypes.DOUBLE) double upperPercentileBound)
+    public static double trimmedMeanTDigestDouble(@SqlType("tdigest(double)") Slice input, @SqlType(StandardTypes.DOUBLE) double lowerQuantileBound, @SqlType(StandardTypes.DOUBLE) double upperQuantileBound)
     {
-        checkCondition(lowerPercentileBound >= 0 && lowerPercentileBound <= 1, INVALID_FUNCTION_ARGUMENT, "Lower percentile bound should be in [0,1].");
-        checkCondition(upperPercentileBound >= 0 && upperPercentileBound <= 1, INVALID_FUNCTION_ARGUMENT, "Upper percentile bound should be in [0,1].");
+        checkCondition(lowerQuantileBound >= 0 && lowerQuantileBound <= 1, INVALID_FUNCTION_ARGUMENT, "Lower quantile bound should be in [0,1].");
+        checkCondition(upperQuantileBound >= 0 && upperQuantileBound <= 1, INVALID_FUNCTION_ARGUMENT, "Upper quantile bound should be in [0,1].");
         TDigest digest = createTDigest(input);
-        return digest.trimmedMean(lowerPercentileBound, upperPercentileBound);
+        return digest.trimmedMean(lowerQuantileBound, upperQuantileBound);
     }
 }
