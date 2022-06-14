@@ -26,6 +26,8 @@ import org.apache.commons.math3.distribution.BinomialDistribution;
 import org.apache.commons.math3.distribution.GeometricDistribution;
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.distribution.PoissonDistribution;
+import org.apache.commons.math3.distribution.RealDistribution;
+import org.apache.commons.math3.distribution.UniformRealDistribution;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
@@ -56,6 +58,7 @@ public class TestTDigestFunctions
     private static final int NUMBER_OF_ENTRIES = 1_000_000;
     private static final int STANDARD_COMPRESSION_FACTOR = 100;
     private static final double STANDARD_ERROR = 0.01;
+    private static final double TRIMMED_MEAN_ERROR_IN_DEVIATIONS = 0.05;
     private static final double[] quantiles = {0.0001, 0.0200, 0.0300, 0.04000, 0.0500, 0.1000, 0.2000, 0.3000, 0.4000, 0.5000, 0.6000, 0.7000, 0.8000,
             0.9000, 0.9500, 0.9600, 0.9700, 0.9800, 0.9999};
     private static final Type TDIGEST_DOUBLE = TDIGEST.createType(ImmutableList.of(TypeParameter.of(DOUBLE)));
@@ -322,10 +325,11 @@ public class TestTDigestFunctions
     public void testTrimmedMean()
     {
         TDigest tDigest = createTDigest(STANDARD_COMPRESSION_FACTOR * 2);
+        RealDistribution distribution = new UniformRealDistribution(0.0d, NUMBER_OF_ENTRIES);
         List<Double> list = new ArrayList<>();
 
         for (int i = 0; i < NUMBER_OF_ENTRIES; i++) {
-            double value = Math.random() * NUMBER_OF_ENTRIES;
+            double value = distribution.sample();
             tDigest.add(value);
             list.add(value);
         }
@@ -340,9 +344,7 @@ public class TestTDigestFunctions
                 highQuantiles.add(quantiles[j]);
             }
         }
-        assertTrimmedMeanValues(lowQuantiles, highQuantiles, STANDARD_ERROR * 2, list, tDigest);
-        // increase error bound to 2% (mean is less accurate than quantile values)
-        // in practice, the difference is always < 2% for uniform distributions with compression=200
+        assertTrimmedMeanValues(lowQuantiles, highQuantiles, Math.sqrt(distribution.getNumericalVariance()), TRIMMED_MEAN_ERROR_IN_DEVIATIONS, list, tDigest);
     }
 
     @Test
@@ -747,7 +749,7 @@ public class TestTDigestFunctions
                 Collections.nCopies(percentiles.length, true));
     }
 
-    private void assertTrimmedMeanValues(List<Double> lowerQuantiles, List<Double> upperQuantiles, double error, List<? extends Number> rows, TDigest tDigest)
+    private void assertTrimmedMeanValues(List<Double> lowerQuantiles, List<Double> upperQuantiles, double sd, double error, List<? extends Number> rows, TDigest tDigest)
     {
         List<Double> expectedTrimmedMeans = IntStream.range(0, lowerQuantiles.size())
                 .mapToDouble(i -> getTrimmedMean(lowerQuantiles.get(i), upperQuantiles.get(i), rows))
@@ -755,11 +757,12 @@ public class TestTDigestFunctions
                 .collect(toImmutableList());
         functionAssertions.assertFunction(
                 format(
-                        "zip_with(ARRAY[%s], zip_with(ARRAY[%s], ARRAY[%s], (l, u) -> (l, u)), (v, bounds) -> abs(1-trimmed_mean(%s, bounds[1], bounds[2])/v) <= %s)",
+                        "zip_with(ARRAY[%s], zip_with(ARRAY[%s], ARRAY[%s], (l, u) -> (l, u)), (v, bounds) -> abs(trimmed_mean(%s, bounds[1], bounds[2]) - v)/%s <= %s)",
                         ARRAY_JOINER.join(expectedTrimmedMeans),
                         ARRAY_JOINER.join(lowerQuantiles),
                         ARRAY_JOINER.join(upperQuantiles),
                         toSqlString(tDigest),
+                        sd,
                         error),
                 METADATA.getType(parseTypeSignature("array(boolean)")),
                 Collections.nCopies(lowerQuantiles.size(), true));
