@@ -595,18 +595,21 @@ public class TDigest
             if (weightSoFar < lowerIndex && lowerIndex <= weightSoFar + weight[i] && upperIndex <= weightSoFar + weight[i]) {
                 // lower and upper bounds are so close together that they are in the same weight interval
                 return mean[i];
-            } else if (weightSoFar < lowerIndex && lowerIndex <= weightSoFar + weight[i]) {
+            }
+            else if (weightSoFar < lowerIndex && lowerIndex <= weightSoFar + weight[i]) {
                 // the lower bound is between our current point and the next point
                 double addedWeight = weightSoFar + weight[i] - lowerIndex;
                 sumInBounds += mean[i] * addedWeight;
                 weightInBounds += addedWeight;
-            } else if (upperIndex < weightSoFar + weight[i] && upperIndex > weightSoFar) {
+            }
+            else if (upperIndex < weightSoFar + weight[i] && upperIndex > weightSoFar) {
                 // the upper bound is between our current point and the next point
                 double addedWeight = upperIndex - weightSoFar;
                 sumInBounds += mean[i] * addedWeight;
                 weightInBounds += addedWeight;
                 return sumInBounds / weightInBounds;
-            } else if (lowerIndex <= weightSoFar && weightSoFar <= upperIndex) {
+            }
+            else if (lowerIndex <= weightSoFar && weightSoFar <= upperIndex) {
                 // we are somewhere in between the lower and upper bounds
                 sumInBounds += mean[i] * weight[i];
                 weightInBounds += weight[i];
