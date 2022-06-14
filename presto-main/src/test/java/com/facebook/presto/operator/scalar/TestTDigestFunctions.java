@@ -747,22 +747,22 @@ public class TestTDigestFunctions
                 Collections.nCopies(percentiles.length, true));
     }
 
-    private void assertTrimmedMeanValues(List<Double> lowQuantiles, List<Double> highQuantiles, double error, List<? extends Number> rows, TDigest tDigest)
+    private void assertTrimmedMeanValues(List<Double> lowerQuantiles, List<Double> upperQuantiles, double error, List<? extends Number> rows, TDigest tDigest)
     {
-        List<Double> expectedTrimmedMeans = IntStream.range(0, lowQuantiles.size())
-                .mapToDouble(i -> getTrimmedMean(lowQuantiles.get(i), highQuantiles.get(i), rows))
+        List<Double> expectedTrimmedMeans = IntStream.range(0, lowerQuantiles.size())
+                .mapToDouble(i -> getTrimmedMean(lowerQuantiles.get(i), upperQuantiles.get(i), rows))
                 .boxed()
                 .collect(toImmutableList());
         functionAssertions.assertFunction(
                 format(
-                        "zip_with(ARRAY[%s], zip_with(ARRAY[%s], ARRAY[%s], (l, h) -> (l, h)), (v, bounds) -> abs(1-trimmed_mean(%s, bounds[1], bounds[2])/v) <= %s)",
+                        "zip_with(ARRAY[%s], zip_with(ARRAY[%s], ARRAY[%s], (l, u) -> (l, u)), (v, bounds) -> abs(1-trimmed_mean(%s, bounds[1], bounds[2])/v) <= %s)",
                         ARRAY_JOINER.join(expectedTrimmedMeans),
-                        ARRAY_JOINER.join(lowQuantiles),
-                        ARRAY_JOINER.join(highQuantiles),
+                        ARRAY_JOINER.join(lowerQuantiles),
+                        ARRAY_JOINER.join(upperQuantiles),
                         toSqlString(tDigest),
                         error),
                 METADATA.getType(parseTypeSignature("array(boolean)")),
-                Collections.nCopies(lowQuantiles.size(), true));
+                Collections.nCopies(lowerQuantiles.size(), true));
     }
 
     private void assertBlockValues(double[] values, double error, TDigest tDigest)

@@ -453,6 +453,7 @@ public class TestTDigest
 
         sort(list);
 
+        // test all quantile combinations
         for (int i = 0; i < quantile.length; i++) {
             for (int j = i + 1; j < quantile.length; j++) {
                 assertTrimmedMean(quantile[i], quantile[j], Math.sqrt(distribution.getNumericalVariance()), TRIMMED_MEAN_ERROR_IN_DEVIATIONS, list, tDigest);
@@ -460,13 +461,13 @@ public class TestTDigest
         }
     }
 
-    private void assertTrimmedMean(double l, double h, double sd, double sigmaBound, List<Double> values, TDigest tDigest)
+    private void assertTrimmedMean(double lowerQuantileBound, double upperQuantileBound, double sd, double sigmaBound, List<Double> values, TDigest tDigest)
     {
         double expectedMean = values
-                .subList((int) (NUMBER_OF_ENTRIES * l), (int) (NUMBER_OF_ENTRIES * h) + 1)
+                .subList((int) (NUMBER_OF_ENTRIES * lowerQuantileBound), (int) (NUMBER_OF_ENTRIES * upperQuantileBound) + 1)
                 .stream()
-                .reduce(0.0d, Double::sum) / ((int) (NUMBER_OF_ENTRIES * h) - (int) (NUMBER_OF_ENTRIES * l) + 1);
-        double returnValue = tDigest.trimmedMean(l, h);
+                .reduce(0.0d, Double::sum) / ((int) (NUMBER_OF_ENTRIES * upperQuantileBound) - (int) (NUMBER_OF_ENTRIES * lowerQuantileBound) + 1);
+        double returnValue = tDigest.trimmedMean(lowerQuantileBound, upperQuantileBound);
         double standardizedError = Math.abs((returnValue - expectedMean) / sd);
         assertTrue(standardizedError <= sigmaBound,
                 format("Returned trimmed mean %s is %s sigma > %s from the actual trimmed mean %s", returnValue, standardizedError, sigmaBound, expectedMean));
