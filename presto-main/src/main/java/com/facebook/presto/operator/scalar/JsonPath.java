@@ -35,7 +35,7 @@ public class JsonPath
     public JsonExtract.JsonExtractor<Slice> getScalarExtractor()
     {
         if (scalarExtractor == null) {
-            scalarExtractor = JsonExtract.generateExtractor(pattern, new JsonExtract.ScalarValueJsonExtractor());;
+            scalarExtractor = JsonExtract.generateExtractor(pattern, new JsonExtract.ScalarValueJsonExtractor());
         }
         return scalarExtractor;
     }

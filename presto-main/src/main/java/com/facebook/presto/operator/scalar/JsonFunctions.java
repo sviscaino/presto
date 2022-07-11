@@ -82,7 +82,8 @@ public final class JsonFunctions
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    private static JsonNode jaywayExtract(Slice json, JsonPath jsonPath) {
+    private static JsonNode jaywayExtract(Slice json, JsonPath jsonPath)
+    {
         try {
             if (jsonPath.getPattern().isEmpty()) {
                 // for some reason, jayway throws IllegalArgumentException for an empty path, but an InvalidPathException for other invalid paths
@@ -91,22 +92,26 @@ public final class JsonFunctions
             Object res = jaywayParseCtx.parse(json.getInput()).read(jsonPath.getPattern());
             if (res instanceof JsonNode) {
                 return (JsonNode) res;
-            } else {
+            }
+            else {
                 // Jayway will respect Jackson mappings as provided in the configuration and return a JsonNode for simple cases.
                 // But for JsonPath functions ($.avg, ...), it will return a Java boxed type (Double, String etc.) instead
                 // of a properly formed JsonNode. This is why we need to re-create a JsonNode in that case
                 return mapper.valueToTree(res);
             }
-        } catch (InvalidJsonException ex) {
+        }
+        catch (InvalidJsonException ex) {
             // replicate Presto's JsonPath behaviour: if the input JSON is invalid, then return NULL
             // instead of throwing an exception
             return null;
-        } catch (InvalidPathException ex) {
+        }
+        catch (InvalidPathException ex) {
             throw new PrestoException(INVALID_FUNCTION_ARGUMENT, format("Invalid JSON path: '%s'", jsonPath.getPattern(), ex.getMessage()));
         }
     }
 
-    private static Slice jsonPathExtract(Slice json, JsonPath jsonPath, JsonPathEngine engine) {
+    private static Slice jsonPathExtract(Slice json, JsonPath jsonPath, JsonPathEngine engine)
+    {
         switch (engine) {
             case PRESTO:
                 return JsonExtract.extract(json, jsonPath.getObjectExtractor());
@@ -119,7 +124,8 @@ public final class JsonFunctions
             default:
                 try {
                     return jsonPathExtract(json, jsonPath, JsonPathEngine.PRESTO);
-                } catch (PrestoException ex) {
+                }
+                catch (PrestoException ex) {
                     if (ex.getErrorCode() == INVALID_FUNCTION_ARGUMENT.toErrorCode()) {
                         return jsonPathExtract(json, jsonPath, JsonPathEngine.JAYWAY);
                     }
@@ -128,7 +134,8 @@ public final class JsonFunctions
         }
     }
 
-    private static Slice jsonPathExtractScalar(Slice json, JsonPath jsonPath, JsonPathEngine engine) {
+    private static Slice jsonPathExtractScalar(Slice json, JsonPath jsonPath, JsonPathEngine engine)
+    {
         switch (engine) {
             case PRESTO:
                 return JsonExtract.extract(json, jsonPath.getScalarExtractor());
@@ -141,7 +148,8 @@ public final class JsonFunctions
             default:
                 try {
                     return jsonPathExtractScalar(json, jsonPath, JsonPathEngine.PRESTO);
-                } catch (PrestoException ex) {
+                }
+                catch (PrestoException ex) {
                     if (ex.getErrorCode() == INVALID_FUNCTION_ARGUMENT.toErrorCode()) {
                         return jsonPathExtractScalar(json, jsonPath, JsonPathEngine.JAYWAY);
                     }
@@ -150,7 +158,8 @@ public final class JsonFunctions
         }
     }
 
-    private static Long jsonPathExtractSize(Slice json, JsonPath jsonPath, JsonPathEngine engine) {
+    private static Long jsonPathExtractSize(Slice json, JsonPath jsonPath, JsonPathEngine engine)
+    {
         switch (engine) {
             case PRESTO:
                 return JsonExtract.extract(json, jsonPath.getSizeExtractor());
@@ -163,7 +172,8 @@ public final class JsonFunctions
             default:
                 try {
                     return jsonPathExtractSize(json, jsonPath, JsonPathEngine.PRESTO);
-                } catch (PrestoException ex) {
+                }
+                catch (PrestoException ex) {
                     if (ex.getErrorCode() == INVALID_FUNCTION_ARGUMENT.toErrorCode()) {
                         return jsonPathExtractSize(json, jsonPath, JsonPathEngine.JAYWAY);
                     }

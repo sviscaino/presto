@@ -2220,5 +2220,4 @@ public final class SystemSessionProperties
     {
         return session.getSystemProperty(JSONPATH_EXTRACTION_ENGINE, JsonPathEngine.class);
     }
-
 }

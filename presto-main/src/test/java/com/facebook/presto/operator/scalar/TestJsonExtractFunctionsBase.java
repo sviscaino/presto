@@ -21,7 +21,8 @@ import static com.facebook.presto.common.type.VarcharType.VARCHAR;
 import static com.facebook.presto.testing.TestingSession.testSessionBuilder;
 import static java.lang.String.format;
 
-public abstract class TestJsonExtractFunctionsBase extends AbstractTestFunctions
+public abstract class TestJsonExtractFunctionsBase
+        extends AbstractTestFunctions
 {
     protected TestJsonExtractFunctionsBase(JsonPathEngine jsonPathEngine)
     {
@@ -30,7 +31,8 @@ public abstract class TestJsonExtractFunctionsBase extends AbstractTestFunctions
                 .build());
     }
 
-    protected void testJsonExtractCommon() {
+    protected void testJsonExtractCommon()
+    {
         assertFunction(format("JSON_EXTRACT('%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : 2} }", "$"), JSON, "{\"x\":{\"a\":1,\"b\":2}}");
         assertFunction(format("JSON_EXTRACT('%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : 2} }", "$.x"), JSON, "{\"a\":1,\"b\":2}");
         assertFunction(format("JSON_EXTRACT('%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : 2} }", "$.x.a"), JSON, "1");
@@ -40,7 +42,8 @@ public abstract class TestJsonExtractFunctionsBase extends AbstractTestFunctions
         assertInvalidFunction(format("JSON_EXTRACT('%s', '%s')", "{\"\":\"\"}", ""), "Invalid JSON path: ''");
     }
 
-    protected void testJsonExtractScalarCommon() {
+    protected void testJsonExtractScalarCommon()
+    {
         assertFunction(format("JSON_EXTRACT_SCALAR(JSON'%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : 2} }", "$"), VARCHAR, null);
         assertFunction(format("JSON_EXTRACT_SCALAR(JSON'%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : 2} }", "$.x"), VARCHAR, null);
         assertFunction(format("JSON_EXTRACT_SCALAR(JSON'%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : 2} }", "$.x.a"), VARCHAR, "1");
@@ -49,7 +52,8 @@ public abstract class TestJsonExtractFunctionsBase extends AbstractTestFunctions
         assertInvalidFunction(format("JSON_EXTRACT_SCALAR(JSON'%s', '%s')", "{\"\":\"\"}", ""), "Invalid JSON path: ''");
     }
 
-    protected void testJsonSizeCommon() {
+    protected void testJsonSizeCommon()
+    {
         assertFunction(format("JSON_SIZE('%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : 2} }", "$"), BIGINT, 1L);
         assertFunction(format("JSON_SIZE('%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : 2} }", "$.x"), BIGINT, 2L);
         assertFunction(format("JSON_SIZE('%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : [1,2,3], \"c\" : {\"w\":9}} }", "$.x"), BIGINT, 3L);

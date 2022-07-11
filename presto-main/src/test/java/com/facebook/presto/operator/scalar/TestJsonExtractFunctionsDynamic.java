@@ -67,7 +67,6 @@ public class TestJsonExtractFunctionsDynamic
             "    \"expensive\": 10\n" +
             "}";
 
-
     @Test
     public void testJsonExtract()
     {
