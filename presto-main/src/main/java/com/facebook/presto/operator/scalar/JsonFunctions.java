@@ -164,7 +164,7 @@ public final class JsonFunctions
                 try {
                     return jsonPathExtractSize(json, jsonPath, JsonPathEngine.PRESTO);
                 } catch (PrestoException ex) {
-                    if (ex.getMessage().startsWith("Invalid JSON path")) {
+                    if (ex.getErrorCode() == INVALID_FUNCTION_ARGUMENT.toErrorCode()) {
                         return jsonPathExtractSize(json, jsonPath, JsonPathEngine.JAYWAY);
                     }
                     throw ex;
