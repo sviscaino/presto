@@ -17,29 +17,42 @@ import io.airlift.slice.Slice;
 
 public class JsonPath
 {
-    private final JsonExtract.JsonExtractor<Slice> scalarExtractor;
-    private final JsonExtract.JsonExtractor<Slice> objectExtractor;
-    private final JsonExtract.JsonExtractor<Long> sizeExtractor;
+    private JsonExtract.JsonExtractor<Slice> scalarExtractor;
+    private JsonExtract.JsonExtractor<Slice> objectExtractor;
+    private JsonExtract.JsonExtractor<Long> sizeExtractor;
+    private final String pattern;
 
     public JsonPath(String pattern)
     {
-        scalarExtractor = JsonExtract.generateExtractor(pattern, new JsonExtract.ScalarValueJsonExtractor());
-        objectExtractor = JsonExtract.generateExtractor(pattern, new JsonExtract.JsonValueJsonExtractor());
-        sizeExtractor = JsonExtract.generateExtractor(pattern, new JsonExtract.JsonSizeExtractor());
+        this.pattern = pattern;
+    }
+
+    public String getPattern()
+    {
+        return this.pattern;
     }
 
     public JsonExtract.JsonExtractor<Slice> getScalarExtractor()
     {
+        if (scalarExtractor == null) {
+            scalarExtractor = JsonExtract.generateExtractor(pattern, new JsonExtract.ScalarValueJsonExtractor());;
+        }
         return scalarExtractor;
     }
 
     public JsonExtract.JsonExtractor<Slice> getObjectExtractor()
     {
+        if (objectExtractor == null) {
+            objectExtractor = JsonExtract.generateExtractor(pattern, new JsonExtract.JsonValueJsonExtractor());
+        }
         return objectExtractor;
     }
 
     public JsonExtract.JsonExtractor<Long> getSizeExtractor()
     {
+        if (sizeExtractor == null) {
+            sizeExtractor = JsonExtract.generateExtractor(pattern, new JsonExtract.JsonSizeExtractor());
+        }
         return sizeExtractor;
     }
 }

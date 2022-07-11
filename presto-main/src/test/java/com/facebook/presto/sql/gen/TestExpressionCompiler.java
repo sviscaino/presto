@@ -1434,21 +1434,22 @@ public class TestExpressionCompiler
     public void testFunctionCallJson()
             throws Exception
     {
+        ConnectorSession session = TEST_SESSION.toConnectorSession();
         for (String value : jsonValues) {
             for (String pattern : jsonPatterns) {
                 assertExecute(generateExpression("json_extract(%s, %s)", value, pattern),
                         JSON,
-                        value == null || pattern == null ? null : JsonFunctions.jsonExtract(utf8Slice(value), new JsonPath(pattern)));
+                        value == null || pattern == null ? null : JsonFunctions.jsonExtract(session.getSqlFunctionProperties(), utf8Slice(value), new JsonPath(pattern)));
                 assertExecute(generateExpression("json_extract_scalar(%s, %s)", value, pattern),
                         value == null ? createUnboundedVarcharType() : createVarcharType(value.length()),
-                        value == null || pattern == null ? null : JsonFunctions.jsonExtractScalar(utf8Slice(value), new JsonPath(pattern)));
+                        value == null || pattern == null ? null : JsonFunctions.jsonExtractScalar(session.getSqlFunctionProperties(), utf8Slice(value), new JsonPath(pattern)));
 
                 assertExecute(generateExpression("json_extract(%s, %s || '')", value, pattern),
                         JSON,
-                        value == null || pattern == null ? null : JsonFunctions.jsonExtract(utf8Slice(value), new JsonPath(pattern)));
+                        value == null || pattern == null ? null : JsonFunctions.jsonExtract(session.getSqlFunctionProperties(), utf8Slice(value), new JsonPath(pattern)));
                 assertExecute(generateExpression("json_extract_scalar(%s, %s || '')", value, pattern),
                         value == null ? createUnboundedVarcharType() : createVarcharType(value.length()),
-                        value == null || pattern == null ? null : JsonFunctions.jsonExtractScalar(utf8Slice(value), new JsonPath(pattern)));
+                        value == null || pattern == null ? null : JsonFunctions.jsonExtractScalar(session.getSqlFunctionProperties(), utf8Slice(value), new JsonPath(pattern)));
             }
         }
 

@@ -55,6 +55,7 @@ import static com.facebook.presto.SystemSessionProperties.isLegacyRowFieldOrdina
 import static com.facebook.presto.SystemSessionProperties.isLegacyTimestamp;
 import static com.facebook.presto.SystemSessionProperties.isLegacyTypeCoercionWarningEnabled;
 import static com.facebook.presto.SystemSessionProperties.isParseDecimalLiteralsAsDouble;
+import static com.facebook.presto.SystemSessionProperties.jsonPathExtractionEngine;
 import static com.facebook.presto.spi.ConnectorId.createInformationSchemaConnectorId;
 import static com.facebook.presto.spi.ConnectorId.createSystemTablesConnectorId;
 import static com.facebook.presto.spi.StandardErrorCode.NOT_FOUND;
@@ -476,6 +477,7 @@ public final class Session
                 .setSessionLocale(getLocale())
                 .setSessionUser(getUser())
                 .setExtraCredentials(identity.getExtraCredentials())
+                .setJsonPathExtractionEngine(jsonPathExtractionEngine(this))
                 .build();
     }
 

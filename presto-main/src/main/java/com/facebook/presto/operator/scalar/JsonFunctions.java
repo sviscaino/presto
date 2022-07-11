@@ -15,6 +15,7 @@ package com.facebook.presto.operator.scalar;
 
 import com.facebook.airlift.json.JsonObjectMapperProvider;
 import com.facebook.presto.common.block.Block;
+import com.facebook.presto.common.function.JsonPathEngine;
 import com.facebook.presto.common.function.OperatorType;
 import com.facebook.presto.common.function.SqlFunctionProperties;
 import com.facebook.presto.common.type.SqlDecimal;
@@ -31,9 +32,14 @@ import com.facebook.presto.type.LiteralParameter;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MappingJsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.primitives.Doubles;
+import com.jayway.jsonpath.InvalidJsonException;
+import com.jayway.jsonpath.InvalidPathException;
+import com.jayway.jsonpath.ParseContext;
+import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
 import io.airlift.slice.DynamicSliceOutput;
 import io.airlift.slice.Slice;
 import io.airlift.slice.SliceOutput;
@@ -70,6 +76,101 @@ public final class JsonFunctions
             .disable(CANONICALIZE_FIELD_NAMES);
 
     private static final ObjectMapper SORTED_MAPPER = new JsonObjectMapperProvider().get().configure(ORDER_MAP_ENTRIES_BY_KEYS, true);
+
+    private static final ParseContext jaywayParseCtx = com.jayway.jsonpath.JsonPath.using(com.jayway.jsonpath.Configuration.builder().jsonProvider(
+            new JacksonJsonNodeJsonProvider()).build());
+
+    private static final ObjectMapper mapper = new ObjectMapper();
+
+    private static JsonNode jaywayExtract(Slice json, JsonPath jsonPath) {
+        try {
+            if (jsonPath.getPattern().isEmpty()) {
+                // for some reason, jayway throws IllegalArgumentException for an empty path, but an InvalidPathException for other invalid paths
+                throw new InvalidPathException();
+            }
+            Object res = jaywayParseCtx.parse(json.getInput()).read(jsonPath.getPattern());
+            if (res instanceof JsonNode) {
+                return (JsonNode) res;
+            } else {
+                // Jayway will respect Jackson mappings as provided in the configuration and return a JsonNode for simple cases.
+                // But for JsonPath functions ($.avg, ...), it will return a Java boxed type (Double, String etc.) instead
+                // of a properly formed JsonNode. This is why we need to re-create a JsonNode in that case
+                return mapper.valueToTree(res);
+            }
+        } catch (InvalidJsonException ex) {
+            // replicate Presto's JsonPath behaviour: if the input JSON is invalid, then return NULL
+            // instead of throwing an exception
+            return null;
+        } catch (InvalidPathException ex) {
+            throw new PrestoException(INVALID_FUNCTION_ARGUMENT, format("Invalid JSON path: '%s'", jsonPath.getPattern(), ex.getMessage()));
+        }
+    }
+
+    private static Slice jsonPathExtract(Slice json, JsonPath jsonPath, JsonPathEngine engine) {
+        switch (engine) {
+            case PRESTO:
+                return JsonExtract.extract(json, jsonPath.getObjectExtractor());
+            case JAYWAY:
+                JsonNode node = jaywayExtract(json, jsonPath);
+                if (node == null) {
+                    return null;
+                }
+                return utf8Slice(node.toString());
+            default:
+                try {
+                    return jsonPathExtract(json, jsonPath, JsonPathEngine.PRESTO);
+                } catch (PrestoException ex) {
+                    if (ex.getErrorCode() == INVALID_FUNCTION_ARGUMENT.toErrorCode()) {
+                        return jsonPathExtract(json, jsonPath, JsonPathEngine.JAYWAY);
+                    }
+                    throw ex;
+                }
+        }
+    }
+
+    private static Slice jsonPathExtractScalar(Slice json, JsonPath jsonPath, JsonPathEngine engine) {
+        switch (engine) {
+            case PRESTO:
+                return JsonExtract.extract(json, jsonPath.getScalarExtractor());
+            case JAYWAY:
+                JsonNode node = jaywayExtract(json, jsonPath);
+                if (node == null || !node.isValueNode()) {
+                    return null;
+                }
+                return utf8Slice(node.asText());
+            default:
+                try {
+                    return jsonPathExtractScalar(json, jsonPath, JsonPathEngine.PRESTO);
+                } catch (PrestoException ex) {
+                    if (ex.getErrorCode() == INVALID_FUNCTION_ARGUMENT.toErrorCode()) {
+                        return jsonPathExtractScalar(json, jsonPath, JsonPathEngine.JAYWAY);
+                    }
+                    throw ex;
+                }
+        }
+    }
+
+    private static Long jsonPathExtractSize(Slice json, JsonPath jsonPath, JsonPathEngine engine) {
+        switch (engine) {
+            case PRESTO:
+                return JsonExtract.extract(json, jsonPath.getSizeExtractor());
+            case JAYWAY:
+                JsonNode node = jaywayExtract(json, jsonPath);
+                if (node == null) {
+                    return null;
+                }
+                return (long) node.size(); // Jackson correctly returns 0 for scalar nodes
+            default:
+                try {
+                    return jsonPathExtractSize(json, jsonPath, JsonPathEngine.PRESTO);
+                } catch (PrestoException ex) {
+                    if (ex.getMessage().startsWith("Invalid JSON path")) {
+                        return jsonPathExtractSize(json, jsonPath, JsonPathEngine.JAYWAY);
+                    }
+                    throw ex;
+                }
+        }
+    }
 
     private JsonFunctions() {}
 
@@ -435,51 +536,51 @@ public final class JsonFunctions
     @SqlNullable
     @LiteralParameters("x")
     @SqlType("varchar(x)")
-    public static Slice varcharJsonExtractScalar(@SqlType("varchar(x)") Slice json, @SqlType(JsonPathType.NAME) JsonPath jsonPath)
+    public static Slice varcharJsonExtractScalar(SqlFunctionProperties properties, @SqlType("varchar(x)") Slice json, @SqlType(JsonPathType.NAME) JsonPath jsonPath)
     {
-        return JsonExtract.extract(json, jsonPath.getScalarExtractor());
+        return jsonPathExtractScalar(json, jsonPath, properties.getJsonPathEngine());
     }
 
     @ScalarFunction
     @SqlNullable
     @SqlType(StandardTypes.VARCHAR)
-    public static Slice jsonExtractScalar(@SqlType(StandardTypes.JSON) Slice json, @SqlType(JsonPathType.NAME) JsonPath jsonPath)
+    public static Slice jsonExtractScalar(SqlFunctionProperties properties, @SqlType(StandardTypes.JSON) Slice json, @SqlType(JsonPathType.NAME) JsonPath jsonPath)
     {
-        return JsonExtract.extract(json, jsonPath.getScalarExtractor());
+        return jsonPathExtractScalar(json, jsonPath, properties.getJsonPathEngine());
     }
 
     @ScalarFunction("json_extract")
     @LiteralParameters("x")
     @SqlNullable
     @SqlType(StandardTypes.JSON)
-    public static Slice varcharJsonExtract(@SqlType("varchar(x)") Slice json, @SqlType(JsonPathType.NAME) JsonPath jsonPath)
+    public static Slice varcharJsonExtract(SqlFunctionProperties properties, @SqlType("varchar(x)") Slice json, @SqlType(JsonPathType.NAME) JsonPath jsonPath)
     {
-        return JsonExtract.extract(json, jsonPath.getObjectExtractor());
+        return jsonPathExtract(json, jsonPath, properties.getJsonPathEngine());
     }
 
     @ScalarFunction
     @SqlNullable
     @SqlType(StandardTypes.JSON)
-    public static Slice jsonExtract(@SqlType(StandardTypes.JSON) Slice json, @SqlType(JsonPathType.NAME) JsonPath jsonPath)
+    public static Slice jsonExtract(SqlFunctionProperties properties, @SqlType(StandardTypes.JSON) Slice json, @SqlType(JsonPathType.NAME) JsonPath jsonPath)
     {
-        return JsonExtract.extract(json, jsonPath.getObjectExtractor());
+        return jsonPathExtract(json, jsonPath, properties.getJsonPathEngine());
     }
 
     @ScalarFunction("json_size")
     @LiteralParameters("x")
     @SqlNullable
     @SqlType(StandardTypes.BIGINT)
-    public static Long varcharJsonSize(@SqlType("varchar(x)") Slice json, @SqlType(JsonPathType.NAME) JsonPath jsonPath)
+    public static Long varcharJsonSize(SqlFunctionProperties properties, @SqlType("varchar(x)") Slice json, @SqlType(JsonPathType.NAME) JsonPath jsonPath)
     {
-        return JsonExtract.extract(json, jsonPath.getSizeExtractor());
+        return jsonPathExtractSize(json, jsonPath, properties.getJsonPathEngine());
     }
 
     @ScalarFunction
     @SqlNullable
     @SqlType(StandardTypes.BIGINT)
-    public static Long jsonSize(@SqlType(StandardTypes.JSON) Slice json, @SqlType(JsonPathType.NAME) JsonPath jsonPath)
+    public static Long jsonSize(SqlFunctionProperties properties, @SqlType(StandardTypes.JSON) Slice json, @SqlType(JsonPathType.NAME) JsonPath jsonPath)
     {
-        return JsonExtract.extract(json, jsonPath.getSizeExtractor());
+        return jsonPathExtractSize(json, jsonPath, properties.getJsonPathEngine());
     }
 
     public static Object getJsonObjectValue(Type valueType, SqlFunctionProperties properties, Block block, int position)
