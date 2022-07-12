@@ -171,8 +171,11 @@ public final class JsonExtract
                 throws IOException;
     }
 
-    public static abstract class JsonExtractorJsonParser<T> implements JsonExtractor<T> {
-        abstract T extract(JsonParser jsonParser) throws IOException;
+    public abstract static class JsonExtractorJsonParser<T>
+            implements JsonExtractor<T>
+    {
+        abstract T extract(JsonParser jsonParser)
+                throws IOException;
 
         @Override
         public T extract(InputStream inputStream)

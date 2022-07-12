@@ -33,20 +33,20 @@ public class TestJsonExtractFunctionsJayway
     public void testJsonExtract()
     {
         testJsonExtractCommon();
-        assertFunction(format("JSON_EXTRACT('%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : 2} }", "$.x..b"), JSON,"[2]");
+        assertFunction(format("JSON_EXTRACT('%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : 2} }", "$.x..b"), JSON, "[2]");
     }
 
     @Test
     public void testJsonSize()
     {
         testJsonSizeCommon();
-        assertFunction(format("JSON_SIZE('%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : 2} }", "$.x..b"), BIGINT,1L);
+        assertFunction(format("JSON_SIZE('%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : 2} }", "$.x..b"), BIGINT, 1L);
     }
 
     @Test
     public void testJsonExtractScalar()
     {
         testJsonExtractScalarCommon();
-        assertFunction(format("JSON_EXTRACT_SCALAR(JSON'%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : 2} }", "$.x..b"), VARCHAR,null);
+        assertFunction(format("JSON_EXTRACT_SCALAR(JSON'%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : 2} }", "$.x..b"), VARCHAR, null);
     }
 }

@@ -20,7 +20,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.InvalidJsonException;
 import com.jayway.jsonpath.InvalidPathException;
-import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.PathNotFoundException;
 import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
 import io.airlift.slice.Slice;
@@ -28,13 +27,12 @@ import io.airlift.slice.Slice;
 import java.io.IOException;
 import java.io.InputStream;
 
-import static java.lang.String.format;
 import static com.facebook.presto.spi.StandardErrorCode.INVALID_FUNCTION_ARGUMENT;
 import static io.airlift.slice.Slices.utf8Slice;
+import static java.lang.String.format;
 
 public class JsonPath
 {
-
     private final JsonExtract.JsonExtractor<Slice> scalarExtractor;
     private final JsonExtract.JsonExtractor<Slice> objectExtractor;
     private final JsonExtract.JsonExtractor<Long> sizeExtractor;
@@ -132,7 +130,8 @@ public class JsonPath
                     }
                     com.jayway.jsonpath.JsonPath jsonPath = com.jayway.jsonpath.JsonPath.compile(pattern);
                     return new JsonPath(getScalarExtractorForJayway(jsonPath, jaywayConfig), getObjectExtractorForJayway(jsonPath, jaywayConfig), getSizeExtractorForJayway(jsonPath, jaywayConfig));
-                } catch (InvalidPathException ex) {
+                }
+                catch (InvalidPathException ex) {
                     throw new PrestoException(INVALID_FUNCTION_ARGUMENT, format("Invalid JSON path: '%s'", pattern));
                 }
             default:
@@ -170,4 +169,3 @@ public class JsonPath
         return sizeExtractor;
     }
 }
-

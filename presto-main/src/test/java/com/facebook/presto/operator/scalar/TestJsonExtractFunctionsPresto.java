@@ -16,7 +16,6 @@ package com.facebook.presto.operator.scalar;
 import com.facebook.presto.common.function.JsonPathExtractionEngine;
 import org.testng.annotations.Test;
 
-import static com.facebook.presto.common.type.JsonType.JSON;
 import static java.lang.String.format;
 
 public class TestJsonExtractFunctionsPresto
