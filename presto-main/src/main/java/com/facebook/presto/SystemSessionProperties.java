@@ -13,6 +13,7 @@
  */
 package com.facebook.presto;
 
+import com.facebook.presto.common.function.JsonPathExtractionEngine;
 import com.facebook.presto.execution.QueryManagerConfig;
 import com.facebook.presto.execution.QueryManagerConfig.ExchangeMaterializationStrategy;
 import com.facebook.presto.execution.TaskManagerConfig;
@@ -229,6 +230,7 @@ public final class SystemSessionProperties
     public static final String SEGMENTED_AGGREGATION_ENABLED = "segmented_aggregation_enabled";
     public static final String USE_HISTORY_BASED_PLAN_STATISTICS = "use_history_based_plan_statistics";
     public static final String USE_EXTERNAL_PLAN_STATISTICS = "use_external_plan_statistics";
+    public static final String JSONPATH_EXTRACTION_ENGINE = "jsonpath_extraction_engine";
 
     //TODO: Prestissimo related session properties that are temporarily put here. They will be relocated in the future
     public static final String PRESTISSIMO_SIMPLIFIED_EXPRESSION_EVALUATION_ENABLED = "simplified_expression_evaluation_enabled";
@@ -1306,7 +1308,19 @@ public final class SystemSessionProperties
                         USE_EXTERNAL_PLAN_STATISTICS,
                         "Use plan statistics from external service in query optimizer",
                         featuresConfig.isUseExternalPlanStatistics(),
-                        false));
+                        false),
+                new PropertyMetadata<>(
+                        JSONPATH_EXTRACTION_ENGINE,
+                        format("Set the engine to be used to compile JsonPath expressions and extract JSON values in JSON_EXTRACT functions. Options are %s",
+                                Stream.of(JsonPathExtractionEngine.values())
+                                        .map(JsonPathExtractionEngine::name)
+                                        .collect(joining(", "))),
+                        VARCHAR,
+                        JsonPathExtractionEngine.class,
+                        JsonPathExtractionEngine.DYNAMIC,
+                        false,
+                        value -> JsonPathExtractionEngine.valueOf(((String) value).toUpperCase()),
+                        JsonPathExtractionEngine::name));
     }
 
     public static boolean isEmptyJoinOptimization(Session session)
@@ -2200,5 +2214,10 @@ public final class SystemSessionProperties
     public static boolean useExternalPlanStatisticsEnabled(Session session)
     {
         return session.getSystemProperty(USE_EXTERNAL_PLAN_STATISTICS, Boolean.class);
+    }
+
+    public static JsonPathExtractionEngine jsonPathExtractionEngine(Session session)
+    {
+        return session.getSystemProperty(JSONPATH_EXTRACTION_ENGINE, JsonPathExtractionEngine.class);
     }
 }

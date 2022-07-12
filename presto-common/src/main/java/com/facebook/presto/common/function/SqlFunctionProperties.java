@@ -35,6 +35,7 @@ public class SqlFunctionProperties
     private final Locale sessionLocale;
     private final String sessionUser;
     private final Map<String, String> extraCredentials;
+    private final JsonPathExtractionEngine jsonPathExtractionEngine;
 
     private SqlFunctionProperties(
             boolean parseDecimalLiteralAsDouble,
@@ -46,7 +47,8 @@ public class SqlFunctionProperties
             long sessionStartTime,
             Locale sessionLocale,
             String sessionUser,
-            Map<String, String> extraCredentials)
+            Map<String, String> extraCredentials,
+            JsonPathExtractionEngine jsonPathExtractionEngine)
     {
         this.parseDecimalLiteralAsDouble = parseDecimalLiteralAsDouble;
         this.legacyRowFieldOrdinalAccessEnabled = legacyRowFieldOrdinalAccessEnabled;
@@ -58,6 +60,7 @@ public class SqlFunctionProperties
         this.sessionLocale = requireNonNull(sessionLocale, "sessionLocale is null");
         this.sessionUser = requireNonNull(sessionUser, "sessionUser is null");
         this.extraCredentials = requireNonNull(extraCredentials, "extraCredentials is null");
+        this.jsonPathExtractionEngine = requireNonNull(jsonPathExtractionEngine);
     }
 
     public boolean isParseDecimalLiteralAsDouble()
@@ -111,6 +114,11 @@ public class SqlFunctionProperties
         return extraCredentials;
     }
 
+    public JsonPathExtractionEngine getJsonPathExtractionEngine()
+    {
+        return jsonPathExtractionEngine;
+    }
+
     @Override
     public boolean equals(Object o)
     {
@@ -155,6 +163,7 @@ public class SqlFunctionProperties
         private Locale sessionLocale;
         private String sessionUser;
         private Map<String, String> extraCredentials = emptyMap();
+        private JsonPathExtractionEngine jsonPathExtractionEngine;
 
         private Builder() {}
 
@@ -218,9 +227,15 @@ public class SqlFunctionProperties
             return this;
         }
 
+        public Builder setJsonPathExtractionEngine(JsonPathExtractionEngine jsonPathExtractionEngine)
+        {
+            this.jsonPathExtractionEngine = jsonPathExtractionEngine;
+            return this;
+        }
+
         public SqlFunctionProperties build()
         {
-            return new SqlFunctionProperties(parseDecimalLiteralAsDouble, legacyRowFieldOrdinalAccessEnabled, legacyTypeCoercionWarningEnabled, timeZoneKey, legacyTimestamp, legacyMapSubscript, sessionStartTime, sessionLocale, sessionUser, extraCredentials);
+            return new SqlFunctionProperties(parseDecimalLiteralAsDouble, legacyRowFieldOrdinalAccessEnabled, legacyTypeCoercionWarningEnabled, timeZoneKey, legacyTimestamp, legacyMapSubscript, sessionStartTime, sessionLocale, sessionUser, extraCredentials, jsonPathExtractionEngine);
         }
     }
 }
