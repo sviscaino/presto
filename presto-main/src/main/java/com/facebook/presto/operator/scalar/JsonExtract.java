@@ -138,16 +138,16 @@ public final class JsonExtract
         }
     }
 
-    public static <T> JsonExtractorJsonParser<T> generateExtractor(String path, JsonExtractorJsonParser<T> rootExtractor)
+    public static <T> PrestoJsonExtractor<T> generateExtractor(String path, PrestoJsonExtractor<T> rootExtractor)
     {
         return generateExtractor(path, rootExtractor, false);
     }
 
-    public static <T> JsonExtractorJsonParser<T> generateExtractor(String path, JsonExtractorJsonParser<T> rootExtractor, boolean exceptionOnOutOfBounds)
+    public static <T> PrestoJsonExtractor<T> generateExtractor(String path, PrestoJsonExtractor<T> rootExtractor, boolean exceptionOnOutOfBounds)
     {
         ImmutableList<String> tokens = ImmutableList.copyOf(new JsonPathTokenizer(path));
 
-        JsonExtractorJsonParser<T> jsonExtractor = rootExtractor;
+        PrestoJsonExtractor<T> jsonExtractor = rootExtractor;
         for (String token : tokens.reverse()) {
             jsonExtractor = new ObjectFieldJsonExtractor<>(token, jsonExtractor, exceptionOnOutOfBounds);
         }
@@ -155,6 +155,13 @@ public final class JsonExtract
     }
 
     public interface JsonExtractor<T>
+    {
+        T extract(InputStream inputStream)
+                throws IOException;
+    }
+
+    public abstract static class PrestoJsonExtractor<T>
+            implements JsonExtractor<T>
     {
         /**
          * Executes the extraction on the existing content of the JsonParser and outputs the match.
@@ -167,13 +174,6 @@ public final class JsonExtract
          *
          * @return the value, or null if not applicable
          */
-        T extract(InputStream inputStream)
-                throws IOException;
-    }
-
-    public abstract static class JsonExtractorJsonParser<T>
-            implements JsonExtractor<T>
-    {
         abstract T extract(JsonParser jsonParser)
                 throws IOException;
 
@@ -193,19 +193,19 @@ public final class JsonExtract
     }
 
     public static class ObjectFieldJsonExtractor<T>
-            extends JsonExtractorJsonParser<T>
+            extends PrestoJsonExtractor<T>
     {
         private final SerializedString fieldName;
-        private final JsonExtractorJsonParser<? extends T> delegate;
+        private final PrestoJsonExtractor<? extends T> delegate;
         private final int index;
         private final boolean exceptionOnOutOfBounds;
 
-        public ObjectFieldJsonExtractor(String fieldName, JsonExtractorJsonParser<? extends T> delegate)
+        public ObjectFieldJsonExtractor(String fieldName, PrestoJsonExtractor<? extends T> delegate)
         {
             this(fieldName, delegate, false);
         }
 
-        public ObjectFieldJsonExtractor(String fieldName, JsonExtractorJsonParser<? extends T> delegate, boolean exceptionOnOutOfBounds)
+        public ObjectFieldJsonExtractor(String fieldName, PrestoJsonExtractor<? extends T> delegate, boolean exceptionOnOutOfBounds)
         {
             this.fieldName = new SerializedString(requireNonNull(fieldName, "fieldName is null"));
             this.delegate = requireNonNull(delegate, "delegate is null");
@@ -275,7 +275,7 @@ public final class JsonExtract
     }
 
     public static class ScalarValueJsonExtractor
-            extends JsonExtractorJsonParser<Slice>
+            extends PrestoJsonExtractor<Slice>
     {
         @Override
         public Slice extract(JsonParser jsonParser)
@@ -293,7 +293,7 @@ public final class JsonExtract
     }
 
     public static class JsonValueJsonExtractor
-            extends JsonExtractorJsonParser<Slice>
+            extends PrestoJsonExtractor<Slice>
     {
         @Override
         public Slice extract(JsonParser jsonParser)
@@ -312,7 +312,7 @@ public final class JsonExtract
     }
 
     public static class JsonSizeExtractor
-            extends JsonExtractorJsonParser<Long>
+            extends PrestoJsonExtractor<Long>
     {
         @Override
         public Long extract(JsonParser jsonParser)
