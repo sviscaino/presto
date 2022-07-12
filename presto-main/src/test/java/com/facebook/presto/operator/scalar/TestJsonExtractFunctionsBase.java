@@ -13,7 +13,7 @@
  */
 package com.facebook.presto.operator.scalar;
 
-import com.facebook.presto.common.function.JsonPathEngine;
+import com.facebook.presto.common.function.JsonPathExtractionEngine;
 
 import static com.facebook.presto.common.type.BigintType.BIGINT;
 import static com.facebook.presto.common.type.JsonType.JSON;
@@ -24,10 +24,10 @@ import static java.lang.String.format;
 public abstract class TestJsonExtractFunctionsBase
         extends AbstractTestFunctions
 {
-    protected TestJsonExtractFunctionsBase(JsonPathEngine jsonPathEngine)
+    protected TestJsonExtractFunctionsBase(JsonPathExtractionEngine jsonPathExtractionEngine)
     {
         super(testSessionBuilder()
-                .setSystemProperty("jsonpath_extraction_engine", String.valueOf(jsonPathEngine))
+                .setSystemProperty("jsonpath_extraction_engine", String.valueOf(jsonPathExtractionEngine))
                 .build());
     }
 
@@ -70,6 +70,7 @@ public abstract class TestJsonExtractFunctionsBase
         assertFunction(format("JSON_SIZE(JSON '%s', '%s')", "[1,2,3]", "$"), BIGINT, 3L);
         assertFunction(format("JSON_SIZE(null, '%s')", "$"), BIGINT, null);
         assertFunction(format("JSON_SIZE(JSON '%s', null)", "[1,2,3]"), BIGINT, null);
+
         assertInvalidFunction(format("JSON_SIZE('%s', '%s')", "{\"\":\"\"}", ""), "Invalid JSON path: ''");
         assertInvalidFunction(format("JSON_SIZE('%s', CHAR '%s')", "{\"\":\"\"}", " "), "Invalid JSON path: ' '");
         assertInvalidFunction(format("JSON_SIZE('%s', '%s')", "{\"\":\"\"}", "."), "Invalid JSON path: '.'");

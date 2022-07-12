@@ -13,7 +13,7 @@
  */
 package com.facebook.presto.operator.scalar;
 
-import com.facebook.presto.common.function.JsonPathEngine;
+import com.facebook.presto.common.function.JsonPathExtractionEngine;
 import org.testng.annotations.Test;
 
 import static com.facebook.presto.common.type.BigintType.BIGINT;
@@ -26,7 +26,7 @@ public class TestJsonExtractFunctionsDynamic
 {
     protected TestJsonExtractFunctionsDynamic()
     {
-        super(JsonPathEngine.DYNAMIC);
+        super(JsonPathExtractionEngine.DYNAMIC);
     }
 
     private String json = "{\n" +

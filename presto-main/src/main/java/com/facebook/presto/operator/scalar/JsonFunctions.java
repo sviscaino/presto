@@ -15,7 +15,7 @@ package com.facebook.presto.operator.scalar;
 
 import com.facebook.airlift.json.JsonObjectMapperProvider;
 import com.facebook.presto.common.block.Block;
-import com.facebook.presto.common.function.JsonPathEngine;
+import com.facebook.presto.common.function.JsonPathExtractionEngine;
 import com.facebook.presto.common.function.OperatorType;
 import com.facebook.presto.common.function.SqlFunctionProperties;
 import com.facebook.presto.common.type.SqlDecimal;
@@ -110,7 +110,7 @@ public final class JsonFunctions
         }
     }
 
-    private static Slice jsonPathExtract(Slice json, JsonPath jsonPath, JsonPathEngine engine)
+    private static Slice jsonPathExtract(Slice json, JsonPath jsonPath, JsonPathExtractionEngine engine)
     {
         switch (engine) {
             case PRESTO:
@@ -123,18 +123,18 @@ public final class JsonFunctions
                 return utf8Slice(node.toString());
             default:
                 try {
-                    return jsonPathExtract(json, jsonPath, JsonPathEngine.PRESTO);
+                    return jsonPathExtract(json, jsonPath, JsonPathExtractionEngine.PRESTO);
                 }
                 catch (PrestoException ex) {
                     if (ex.getErrorCode() == INVALID_FUNCTION_ARGUMENT.toErrorCode()) {
-                        return jsonPathExtract(json, jsonPath, JsonPathEngine.JAYWAY);
+                        return jsonPathExtract(json, jsonPath, JsonPathExtractionEngine.JAYWAY);
                     }
                     throw ex;
                 }
         }
     }
 
-    private static Slice jsonPathExtractScalar(Slice json, JsonPath jsonPath, JsonPathEngine engine)
+    private static Slice jsonPathExtractScalar(Slice json, JsonPath jsonPath, JsonPathExtractionEngine engine)
     {
         switch (engine) {
             case PRESTO:
@@ -147,18 +147,18 @@ public final class JsonFunctions
                 return utf8Slice(node.asText());
             default:
                 try {
-                    return jsonPathExtractScalar(json, jsonPath, JsonPathEngine.PRESTO);
+                    return jsonPathExtractScalar(json, jsonPath, JsonPathExtractionEngine.PRESTO);
                 }
                 catch (PrestoException ex) {
                     if (ex.getErrorCode() == INVALID_FUNCTION_ARGUMENT.toErrorCode()) {
-                        return jsonPathExtractScalar(json, jsonPath, JsonPathEngine.JAYWAY);
+                        return jsonPathExtractScalar(json, jsonPath, JsonPathExtractionEngine.JAYWAY);
                     }
                     throw ex;
                 }
         }
     }
 
-    private static Long jsonPathExtractSize(Slice json, JsonPath jsonPath, JsonPathEngine engine)
+    private static Long jsonPathExtractSize(Slice json, JsonPath jsonPath, JsonPathExtractionEngine engine)
     {
         switch (engine) {
             case PRESTO:
@@ -171,11 +171,11 @@ public final class JsonFunctions
                 return (long) node.size(); // Jackson correctly returns 0 for scalar nodes
             default:
                 try {
-                    return jsonPathExtractSize(json, jsonPath, JsonPathEngine.PRESTO);
+                    return jsonPathExtractSize(json, jsonPath, JsonPathExtractionEngine.PRESTO);
                 }
                 catch (PrestoException ex) {
                     if (ex.getErrorCode() == INVALID_FUNCTION_ARGUMENT.toErrorCode()) {
-                        return jsonPathExtractSize(json, jsonPath, JsonPathEngine.JAYWAY);
+                        return jsonPathExtractSize(json, jsonPath, JsonPathExtractionEngine.JAYWAY);
                     }
                     throw ex;
                 }
@@ -548,7 +548,7 @@ public final class JsonFunctions
     @SqlType("varchar(x)")
     public static Slice varcharJsonExtractScalar(SqlFunctionProperties properties, @SqlType("varchar(x)") Slice json, @SqlType(JsonPathType.NAME) JsonPath jsonPath)
     {
-        return jsonPathExtractScalar(json, jsonPath, properties.getJsonPathEngine());
+        return jsonPathExtractScalar(json, jsonPath, properties.getJsonPathExtractionEngine());
     }
 
     @ScalarFunction
@@ -556,7 +556,7 @@ public final class JsonFunctions
     @SqlType(StandardTypes.VARCHAR)
     public static Slice jsonExtractScalar(SqlFunctionProperties properties, @SqlType(StandardTypes.JSON) Slice json, @SqlType(JsonPathType.NAME) JsonPath jsonPath)
     {
-        return jsonPathExtractScalar(json, jsonPath, properties.getJsonPathEngine());
+        return jsonPathExtractScalar(json, jsonPath, properties.getJsonPathExtractionEngine());
     }
 
     @ScalarFunction("json_extract")
@@ -565,7 +565,7 @@ public final class JsonFunctions
     @SqlType(StandardTypes.JSON)
     public static Slice varcharJsonExtract(SqlFunctionProperties properties, @SqlType("varchar(x)") Slice json, @SqlType(JsonPathType.NAME) JsonPath jsonPath)
     {
-        return jsonPathExtract(json, jsonPath, properties.getJsonPathEngine());
+        return jsonPathExtract(json, jsonPath, properties.getJsonPathExtractionEngine());
     }
 
     @ScalarFunction
@@ -573,7 +573,7 @@ public final class JsonFunctions
     @SqlType(StandardTypes.JSON)
     public static Slice jsonExtract(SqlFunctionProperties properties, @SqlType(StandardTypes.JSON) Slice json, @SqlType(JsonPathType.NAME) JsonPath jsonPath)
     {
-        return jsonPathExtract(json, jsonPath, properties.getJsonPathEngine());
+        return jsonPathExtract(json, jsonPath, properties.getJsonPathExtractionEngine());
     }
 
     @ScalarFunction("json_size")
@@ -582,7 +582,7 @@ public final class JsonFunctions
     @SqlType(StandardTypes.BIGINT)
     public static Long varcharJsonSize(SqlFunctionProperties properties, @SqlType("varchar(x)") Slice json, @SqlType(JsonPathType.NAME) JsonPath jsonPath)
     {
-        return jsonPathExtractSize(json, jsonPath, properties.getJsonPathEngine());
+        return jsonPathExtractSize(json, jsonPath, properties.getJsonPathExtractionEngine());
     }
 
     @ScalarFunction
@@ -590,7 +590,7 @@ public final class JsonFunctions
     @SqlType(StandardTypes.BIGINT)
     public static Long jsonSize(SqlFunctionProperties properties, @SqlType(StandardTypes.JSON) Slice json, @SqlType(JsonPathType.NAME) JsonPath jsonPath)
     {
-        return jsonPathExtractSize(json, jsonPath, properties.getJsonPathEngine());
+        return jsonPathExtractSize(json, jsonPath, properties.getJsonPathExtractionEngine());
     }
 
     public static Object getJsonObjectValue(Type valueType, SqlFunctionProperties properties, Block block, int position)

@@ -13,7 +13,7 @@
  */
 package com.facebook.presto;
 
-import com.facebook.presto.common.function.JsonPathEngine;
+import com.facebook.presto.common.function.JsonPathExtractionEngine;
 import com.facebook.presto.execution.QueryManagerConfig;
 import com.facebook.presto.execution.QueryManagerConfig.ExchangeMaterializationStrategy;
 import com.facebook.presto.execution.TaskManagerConfig;
@@ -1312,15 +1312,15 @@ public final class SystemSessionProperties
                 new PropertyMetadata<>(
                         JSONPATH_EXTRACTION_ENGINE,
                         format("Set the engine to be used to compile JsonPath expressions and extract JSON values in JSON_EXTRACT functions. Options are %s",
-                                Stream.of(JsonPathEngine.values())
-                                        .map(JsonPathEngine::name)
-                                        .collect(joining(","))),
+                                Stream.of(JsonPathExtractionEngine.values())
+                                        .map(JsonPathExtractionEngine::name)
+                                        .collect(joining(", "))),
                         VARCHAR,
-                        JsonPathEngine.class,
-                        JsonPathEngine.DYNAMIC,
+                        JsonPathExtractionEngine.class,
+                        JsonPathExtractionEngine.DYNAMIC,
                         false,
-                        value -> JsonPathEngine.valueOf(((String) value).toUpperCase()),
-                        JsonPathEngine::name));
+                        value -> JsonPathExtractionEngine.valueOf(((String) value).toUpperCase()),
+                        JsonPathExtractionEngine::name));
     }
 
     public static boolean isEmptyJoinOptimization(Session session)
@@ -2216,8 +2216,8 @@ public final class SystemSessionProperties
         return session.getSystemProperty(USE_EXTERNAL_PLAN_STATISTICS, Boolean.class);
     }
 
-    public static JsonPathEngine jsonPathExtractionEngine(Session session)
+    public static JsonPathExtractionEngine jsonPathExtractionEngine(Session session)
     {
-        return session.getSystemProperty(JSONPATH_EXTRACTION_ENGINE, JsonPathEngine.class);
+        return session.getSystemProperty(JSONPATH_EXTRACTION_ENGINE, JsonPathExtractionEngine.class);
     }
 }

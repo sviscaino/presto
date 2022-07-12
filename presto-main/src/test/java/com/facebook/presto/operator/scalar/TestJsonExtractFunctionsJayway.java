@@ -13,7 +13,7 @@
  */
 package com.facebook.presto.operator.scalar;
 
-import com.facebook.presto.common.function.JsonPathEngine;
+import com.facebook.presto.common.function.JsonPathExtractionEngine;
 import org.testng.annotations.Test;
 
 public class TestJsonExtractFunctionsJayway
@@ -21,7 +21,7 @@ public class TestJsonExtractFunctionsJayway
 {
     protected TestJsonExtractFunctionsJayway()
     {
-        super(JsonPathEngine.JAYWAY);
+        super(JsonPathExtractionEngine.JAYWAY);
     }
 
     @Test

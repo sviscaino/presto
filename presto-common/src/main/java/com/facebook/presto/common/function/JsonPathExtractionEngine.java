@@ -13,9 +13,22 @@
  */
 package com.facebook.presto.common.function;
 
-public enum JsonPathEngine
+public enum JsonPathExtractionEngine
 {
+    /*
+     * A fast and simple extraction algorithm built-in to Presto.
+     * Only supports simple nesting ($.x.y[0].z)
+     */
     PRESTO,
+    /*
+     * An external library (https://github.com/json-path/JsonPath) that supports complex
+     * JsonPath spec such as filtering, projections, aggregation functions, etc.
+     * Provides additional features at the cost of performance.
+     */
     JAYWAY,
+    /*
+     * With this setting, we first try to parse the JsonPath using PRESTO.
+     * If this fails, we try to fallback to JAYWAY.
+     */
     DYNAMIC
 }
