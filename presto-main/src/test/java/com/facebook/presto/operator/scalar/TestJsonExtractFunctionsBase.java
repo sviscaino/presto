@@ -36,6 +36,7 @@ public abstract class TestJsonExtractFunctionsBase
         assertFunction(format("JSON_EXTRACT('%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : 2} }", "$"), JSON, "{\"x\":{\"a\":1,\"b\":2}}");
         assertFunction(format("JSON_EXTRACT('%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : 2} }", "$.x"), JSON, "{\"a\":1,\"b\":2}");
         assertFunction(format("JSON_EXTRACT('%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : 2} }", "$.x.a"), JSON, "1");
+        assertFunction(format("JSON_EXTRACT('%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : 2} }", "$.x.c"), JSON, null);
         assertFunction(format("JSON_EXTRACT('%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : [2, 3]} }", "$.x.b[1]"), JSON, "3");
         assertFunction(format("JSON_EXTRACT('%s', '%s')", "[1,2,3]", "$[1]"), JSON, "2");
         assertFunction(format("JSON_EXTRACT('%s', '%s')", "INVALID_JSON", "$"), JSON, null);

@@ -13,46 +13,162 @@
  */
 package com.facebook.presto.operator.scalar;
 
+import com.facebook.presto.common.function.JsonPathExtractionEngine;
+import com.facebook.presto.spi.PrestoException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.jsonpath.Configuration;
+import com.jayway.jsonpath.InvalidJsonException;
+import com.jayway.jsonpath.InvalidPathException;
+import com.jayway.jsonpath.Option;
+import com.jayway.jsonpath.PathNotFoundException;
+import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
 import io.airlift.slice.Slice;
+
+import java.io.IOException;
+import java.io.InputStream;
+
+import static java.lang.String.format;
+import static com.facebook.presto.spi.StandardErrorCode.INVALID_FUNCTION_ARGUMENT;
+import static io.airlift.slice.Slices.utf8Slice;
 
 public class JsonPath
 {
-    private JsonExtract.JsonExtractor<Slice> scalarExtractor;
-    private JsonExtract.JsonExtractor<Slice> objectExtractor;
-    private JsonExtract.JsonExtractor<Long> sizeExtractor;
-    private final String pattern;
 
-    public JsonPath(String pattern)
+    private final JsonExtract.JsonExtractor<Slice> scalarExtractor;
+    private final JsonExtract.JsonExtractor<Slice> objectExtractor;
+    private final JsonExtract.JsonExtractor<Long> sizeExtractor;
+    private static final ObjectMapper mapper = new ObjectMapper();
+
+    private static JsonExtract.JsonExtractor<Slice> getScalarExtractorForJayway(com.jayway.jsonpath.JsonPath jsonPath, Configuration jaywayConfig)
     {
-        this.pattern = pattern;
+        return new JsonExtract.JsonExtractor<Slice>()
+        {
+            @Override
+            public Slice extract(InputStream inputStream)
+                    throws IOException
+            {
+                JsonNode node = jaywayExtract(jsonPath, jaywayConfig, inputStream);
+                if (node == null || !node.isValueNode()) {
+                    return null;
+                }
+                return utf8Slice(node.asText());
+            }
+        };
     }
 
-    public String getPattern()
+    private static JsonExtract.JsonExtractor<Slice> getObjectExtractorForJayway(com.jayway.jsonpath.JsonPath jsonPath, Configuration jaywayConfig)
     {
-        return this.pattern;
+        return new JsonExtract.JsonExtractor<Slice>()
+        {
+            @Override
+            public Slice extract(InputStream inputStream)
+                    throws IOException
+            {
+                JsonNode node = jaywayExtract(jsonPath, jaywayConfig, inputStream);
+                if (node == null) {
+                    return null;
+                }
+                return utf8Slice(node.toString());
+            }
+        };
+    }
+
+    private static JsonExtract.JsonExtractor<Long> getSizeExtractorForJayway(com.jayway.jsonpath.JsonPath jsonPath, Configuration jaywayConfig)
+    {
+        return new JsonExtract.JsonExtractor<Long>()
+        {
+            @Override
+            public Long extract(InputStream inputStream)
+                    throws IOException
+            {
+                JsonNode node = jaywayExtract(jsonPath, jaywayConfig, inputStream);
+                if (node == null) {
+                    return null;
+                }
+                return (long) node.size(); // Jackson correctly returns 0 for scalar nodes
+            }
+        };
+    }
+
+    private static JsonNode jaywayExtract(com.jayway.jsonpath.JsonPath jsonPath, Configuration jaywayConfig, InputStream inputStream)
+            throws IOException
+    {
+        com.jayway.jsonpath.JsonPath.parse("{}").read("null");
+        try {
+            Object res = jsonPath.read(inputStream, jaywayConfig);
+            if (res instanceof JsonNode) {
+                if (((JsonNode) res).isNull()) {
+                    return null;
+                }
+                return (JsonNode) res;
+            }
+            else {
+                // Jayway will respect Jackson mappings as provided in the configuration and return a JsonNode for simple cases.
+                // But for JsonPath functions ($.avg, ...), it will return a Java boxed type (Double, String etc.) instead
+                // of a properly formed JsonNode. This is why we need to re-create a JsonNode in that case
+                return mapper.valueToTree(res);
+            }
+        }
+        catch (InvalidJsonException | PathNotFoundException ex) {
+            // replicate Presto's JsonPath behaviour: if the input JSON is invalid or no result is found,
+            // then return NULL instead of throwing an exception
+            return null;
+        }
+    }
+
+    public static JsonPath build(String pattern, JsonPathExtractionEngine engine)
+    {
+        switch (engine) {
+            case PRESTO:
+                return new JsonPath(JsonExtract.generateExtractor(pattern, new JsonExtract.ScalarValueJsonExtractor()),
+                        JsonExtract.generateExtractor(pattern, new JsonExtract.JsonValueJsonExtractor()),
+                        JsonExtract.generateExtractor(pattern, new JsonExtract.JsonSizeExtractor()));
+            case JAYWAY:
+                try {
+                    Configuration jaywayConfig = Configuration.builder().jsonProvider(new JacksonJsonNodeJsonProvider()).build();
+                    if (pattern.isEmpty()) {
+                        // for some reason, jayway throws IllegalArgumentException for an empty path, but an InvalidPathException for other invalid paths
+                        throw new InvalidPathException();
+                    }
+                    com.jayway.jsonpath.JsonPath jsonPath = com.jayway.jsonpath.JsonPath.compile(pattern);
+                    return new JsonPath(getScalarExtractorForJayway(jsonPath, jaywayConfig), getObjectExtractorForJayway(jsonPath, jaywayConfig), getSizeExtractorForJayway(jsonPath, jaywayConfig));
+                } catch (InvalidPathException ex) {
+                    throw new PrestoException(INVALID_FUNCTION_ARGUMENT, format("Invalid JSON path: '%s'", pattern));
+                }
+            default:
+                try {
+                    return build(pattern, JsonPathExtractionEngine.PRESTO);
+                }
+                catch (PrestoException ex) {
+                    if (ex.getErrorCode() == INVALID_FUNCTION_ARGUMENT.toErrorCode()) {
+                        return build(pattern, JsonPathExtractionEngine.JAYWAY);
+                    }
+                    throw ex;
+                }
+        }
+    }
+
+    public JsonPath(JsonExtract.JsonExtractor<Slice> scalar, JsonExtract.JsonExtractor<Slice> object, JsonExtract.JsonExtractor<Long> size)
+    {
+        scalarExtractor = scalar;
+        objectExtractor = object;
+        sizeExtractor = size;
     }
 
     public JsonExtract.JsonExtractor<Slice> getScalarExtractor()
     {
-        if (scalarExtractor == null) {
-            scalarExtractor = JsonExtract.generateExtractor(pattern, new JsonExtract.ScalarValueJsonExtractor());
-        }
         return scalarExtractor;
     }
 
     public JsonExtract.JsonExtractor<Slice> getObjectExtractor()
     {
-        if (objectExtractor == null) {
-            objectExtractor = JsonExtract.generateExtractor(pattern, new JsonExtract.JsonValueJsonExtractor());
-        }
         return objectExtractor;
     }
 
     public JsonExtract.JsonExtractor<Long> getSizeExtractor()
     {
-        if (sizeExtractor == null) {
-            sizeExtractor = JsonExtract.generateExtractor(pattern, new JsonExtract.JsonSizeExtractor());
-        }
         return sizeExtractor;
     }
 }
+

@@ -69,6 +69,7 @@ import java.util.stream.LongStream;
 import static com.facebook.airlift.concurrent.Threads.daemonThreadsNamed;
 import static com.facebook.airlift.testing.Closeables.closeAllRuntimeException;
 import static com.facebook.presto.SessionTestUtils.TEST_SESSION;
+import static com.facebook.presto.common.function.JsonPathExtractionEngine.PRESTO;
 import static com.facebook.presto.common.type.BigintType.BIGINT;
 import static com.facebook.presto.common.type.BooleanType.BOOLEAN;
 import static com.facebook.presto.common.type.DateTimeEncoding.packDateTimeWithZone;
@@ -1439,17 +1440,17 @@ public class TestExpressionCompiler
             for (String pattern : jsonPatterns) {
                 assertExecute(generateExpression("json_extract(%s, %s)", value, pattern),
                         JSON,
-                        value == null || pattern == null ? null : JsonFunctions.jsonExtract(session.getSqlFunctionProperties(), utf8Slice(value), new JsonPath(pattern)));
+                        value == null || pattern == null ? null : JsonFunctions.jsonExtract(utf8Slice(value), JsonPath.build(pattern, PRESTO)));
                 assertExecute(generateExpression("json_extract_scalar(%s, %s)", value, pattern),
                         value == null ? createUnboundedVarcharType() : createVarcharType(value.length()),
-                        value == null || pattern == null ? null : JsonFunctions.jsonExtractScalar(session.getSqlFunctionProperties(), utf8Slice(value), new JsonPath(pattern)));
+                        value == null || pattern == null ? null : JsonFunctions.jsonExtractScalar(utf8Slice(value), JsonPath.build(pattern, PRESTO)));
 
                 assertExecute(generateExpression("json_extract(%s, %s || '')", value, pattern),
                         JSON,
-                        value == null || pattern == null ? null : JsonFunctions.jsonExtract(session.getSqlFunctionProperties(), utf8Slice(value), new JsonPath(pattern)));
+                        value == null || pattern == null ? null : JsonFunctions.jsonExtract(utf8Slice(value), JsonPath.build(pattern, PRESTO)));
                 assertExecute(generateExpression("json_extract_scalar(%s, %s || '')", value, pattern),
                         value == null ? createUnboundedVarcharType() : createVarcharType(value.length()),
-                        value == null || pattern == null ? null : JsonFunctions.jsonExtractScalar(session.getSqlFunctionProperties(), utf8Slice(value), new JsonPath(pattern)));
+                        value == null || pattern == null ? null : JsonFunctions.jsonExtractScalar(utf8Slice(value), JsonPath.build(pattern, PRESTO)));
             }
         }
 
