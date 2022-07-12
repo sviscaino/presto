@@ -114,7 +114,8 @@ public class SqlFunctionProperties
         return extraCredentials;
     }
 
-    public JsonPathExtractionEngine getJsonPathExtractionEngine() {
+    public JsonPathExtractionEngine getJsonPathExtractionEngine()
+    {
         return jsonPathExtractionEngine;
     }
 
