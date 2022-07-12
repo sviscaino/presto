@@ -16,6 +16,9 @@ package com.facebook.presto.operator.scalar;
 import com.facebook.presto.common.function.JsonPathExtractionEngine;
 import org.testng.annotations.Test;
 
+import static com.facebook.presto.common.type.JsonType.JSON;
+import static java.lang.String.format;
+
 public class TestJsonExtractFunctionsPresto
         extends TestJsonExtractFunctionsBase
 {
@@ -28,17 +31,20 @@ public class TestJsonExtractFunctionsPresto
     public void testJsonExtract()
     {
         testJsonExtractCommon();
+        assertInvalidFunction(format("JSON_EXTRACT('%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : 2} }", "$.x..b"), "Invalid JSON path: '$.x..b'");
     }
 
     @Test
     public void testJsonSize()
     {
         testJsonSizeCommon();
+        assertInvalidFunction(format("JSON_SIZE('%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : 2} }", "$.x..b"), "Invalid JSON path: '$.x..b'");
     }
 
     @Test
     public void testJsonExtractScalar()
     {
         testJsonExtractScalarCommon();
+        assertInvalidFunction(format("JSON_EXTRACT_SCALAR(JSON'%s', '%s')", "{\"x\": {\"a\" : 1, \"b\" : 2} }", "$.x..b"), "Invalid JSON path: '$.x..b'");
     }
 }

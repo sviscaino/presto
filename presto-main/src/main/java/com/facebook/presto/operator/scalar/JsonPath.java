@@ -94,7 +94,6 @@ public class JsonPath
     private static JsonNode jaywayExtract(com.jayway.jsonpath.JsonPath jsonPath, Configuration jaywayConfig, InputStream inputStream)
             throws IOException
     {
-        com.jayway.jsonpath.JsonPath.parse("{}").read("null");
         try {
             Object res = jsonPath.read(inputStream, jaywayConfig);
             if (res instanceof JsonNode) {
@@ -127,7 +126,7 @@ public class JsonPath
             case JAYWAY:
                 try {
                     Configuration jaywayConfig = Configuration.builder().jsonProvider(new JacksonJsonNodeJsonProvider()).build();
-                    if (pattern.isEmpty()) {
+                    if (pattern == null || pattern.isEmpty()) {
                         // for some reason, jayway throws IllegalArgumentException for an empty path, but an InvalidPathException for other invalid paths
                         throw new InvalidPathException();
                     }
